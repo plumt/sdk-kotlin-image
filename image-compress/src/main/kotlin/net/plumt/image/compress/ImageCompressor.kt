@@ -30,7 +30,8 @@ public interface ImageCompressor {
      * [source] 를 압축한다. [CompressorConfig.dispatcher] 에서 실행되며 취소에 응한다(취소는 `CancellationException` 그대로).
      *
      * @throws ImageCompressionException 디코딩·인코딩·입출력·메모리·용량 목표 실패(원인은 `cause`)
-     * @throws IllegalArgumentException 직접 만든 [Resizer]·[CompressionStrategy] 가 잘못된 값을 낸 경우
+     * @throws IllegalArgumentException 직접 만든 [Resizer]·[CompressionStrategy]·[Encoder] 가 잘못된 값을 냈거나 IAE 를 던진 경우.
+     *   플랫폼 내부의 IAE 는 [ImageCompressionException] 으로 감싼다
      */
     public suspend fun compress(source: ImageSource): CompressedImage
 }
@@ -120,8 +121,15 @@ public class ImageCompressorBuilder internal constructor() {
     /** 결과 픽셀 수 상한(기본 16,777,216 = 4096x4096). [resizer] 가 이보다 크게 계획해도 비율을 유지해 줄인다. */
     public var maxPixels: Long = DEFAULT_MAX_PIXELS
 
-    /** 용량 목표(바이트). 지정하면 [TargetSizeStrategy] 로 맞추고, 못 맞추면 [TargetSizeNotReachedException]. [strategy] 와 함께 쓸 수 없다. */
+    /**
+     * 용량 목표(바이트). 지정하면 [TargetSizeStrategy] 로 맞추고, 못 맞추면 [TargetSizeNotReachedException].
+     * [strategy] 와는 둘 중 **나중에 대입한 것**이 쓰인다 — null 이 아닌 값을 넣으면 [strategy] 를 비운다.
+     */
     public var targetBytes: Long? = null
+        set(value) {
+            field = value
+            if (value != null) strategy = null
+        }
 
     /** 용량 목표 탐색의 최소 품질(기본 30). [targetBytes] 가 있을 때만 쓰인다. */
     public var minQuality: Int = TargetSizeStrategy.DEFAULT_MIN_QUALITY
@@ -132,13 +140,23 @@ public class ImageCompressorBuilder internal constructor() {
     /** 용량 목표를 위해 줄일 수 있는 긴 변의 하한(px, 기본 64). */
     public var minDimension: Int = TargetSizeStrategy.DEFAULT_MIN_DIMENSION
 
-    /** 직접 만든 인코딩 전략. 지정하면 [targetBytes] 를 쓸 수 없다. 기본은 [targetBytes] 유무에 따라 한 번 인코딩 또는 용량 맞춤. */
+    /**
+     * 직접 만든 인코딩 전략. 기본은 [targetBytes] 유무에 따라 한 번 인코딩 또는 용량 맞춤.
+     * null 이 아닌 값을 넣으면 [targetBytes] 를 비운다 — 용량 목표가 있는 프로필 위에도 그대로 덮어쓸 수 있다.
+     */
     public var strategy: CompressionStrategy? = null
+        set(value) {
+            field = value
+            if (value != null) targetBytes = null
+        }
 
     /** 직접 만든 인코더. 기본 [Encoder.Default]. */
     public var encoder: Encoder = Encoder.Default
 
-    /** 작업 디스패처. 기본 [Dispatchers.IO]. */
+    /**
+     * 작업 디스패처. 기본 [Dispatchers.IO]. 한 장마다 디코딩한 Bitmap(수십 MB 일 수 있다)을 잡으므로 여러 장을 동시에 압축하면
+     * 메모리가 장 수만큼 쌓인다. `Dispatchers.IO.limitedParallelism(2)` 처럼 동시 실행 수를 제한한 디스패처를 권한다.
+     */
     public var dispatcher: CoroutineDispatcher = Dispatchers.IO
 
     /**
@@ -148,10 +166,16 @@ public class ImageCompressorBuilder internal constructor() {
      */
     public var preserveMetadata: Set<MetadataGroup> = emptySet()
 
-    /** JPEG 처럼 투명을 못 담는 형식에서 투명 픽셀 아래에 깔 색(기본 흰색 `0xFFFFFFFF`). */
+    /**
+     * JPEG 처럼 투명을 못 담는 형식에서 투명 픽셀 아래에 깔 색(기본 흰색 `0xFFFFFFFF`).
+     * 반투명 색이면 흰색 위에 먼저 합성한다(투명 영역이 검게 나오지 않는다).
+     */
     public var backgroundColor: Int = 0xFFFFFFFF.toInt()
 
-    /** 짧은 변 기준 가운데 정사각형으로 잘라 [size]x[size] 로 만든다([resizer] 를 대체한다). */
+    /**
+     * 짧은 변 기준 가운데 정사각형으로 잘라 [size]x[size] 로 만든다([resizer] 를 대체한다).
+     * 짧은 변이 [size] 보다 작으면 기본으로는 키우지 않아 결과가 더 작다. 언제나 [size] 가 필요하면 [allowUpscale] 을 true 로 한다.
+     */
     public fun centerSquare(size: Int, allowUpscale: Boolean = false) {
         resizer = CenterSquareResizer(size, allowUpscale)
     }
@@ -167,7 +191,6 @@ public class ImageCompressorBuilder internal constructor() {
         require(maxPixels > 0) { "maxPixels 는 1 이상이어야 한다: $maxPixels" }
         val target = targetBytes
         val custom = strategy
-        require(target == null || custom == null) { "targetBytes 와 strategy 는 함께 쓸 수 없다" }
         val resolvedStrategy = when {
             custom != null -> custom
             target != null -> {

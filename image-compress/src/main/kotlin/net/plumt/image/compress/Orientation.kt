@@ -37,4 +37,20 @@ internal object Orientation {
         val m = matrix(orientation) ?: return source
         return Bitmap.createBitmap(source, 0, 0, source.width, source.height, m, false)
     }
+
+    /**
+     * 방향을 적용한 좌표계의 사각형([left], [top], [width]x[height])이 방향 적용 **전**([rawWidth]x[rawHeight]) 좌표계에서
+     * 차지하는 사각형. 결과는 `[x, y, w, h]`.
+     */
+    fun rawRect(orientation: Int, rawWidth: Int, rawHeight: Int, left: Int, top: Int, width: Int, height: Int): IntArray =
+        when (orientation) {
+            ExifInterface.ORIENTATION_FLIP_HORIZONTAL -> intArrayOf(rawWidth - left - width, top, width, height)
+            ExifInterface.ORIENTATION_ROTATE_180 -> intArrayOf(rawWidth - left - width, rawHeight - top - height, width, height)
+            ExifInterface.ORIENTATION_FLIP_VERTICAL -> intArrayOf(left, rawHeight - top - height, width, height)
+            ExifInterface.ORIENTATION_TRANSPOSE -> intArrayOf(top, left, height, width)
+            ExifInterface.ORIENTATION_ROTATE_90 -> intArrayOf(top, rawHeight - left - width, height, width)
+            ExifInterface.ORIENTATION_TRANSVERSE -> intArrayOf(rawWidth - top - height, rawHeight - left - width, height, width)
+            ExifInterface.ORIENTATION_ROTATE_270 -> intArrayOf(rawWidth - top - height, left, height, width)
+            else -> intArrayOf(left, top, width, height)
+        }
 }

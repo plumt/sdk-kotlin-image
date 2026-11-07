@@ -47,6 +47,23 @@ internal object TestImages {
         }
     }
 
+    /**
+     * EXIF 길이 필드가 망가진 JPEG(고정 시드). 픽셀은 멀쩡하지만 ExifInterface 가 터무니없이 큰 배열을 요구해
+     * OutOfMemoryError 를 낸다 — 0.0.1 은 이 한 장 때문에 압축 전체가 실패했다.
+     */
+    fun corruptExifJpeg(): ByteArray {
+        val base = withExif(noisyJpeg(64, 48)) {
+            setAttribute(ExifInterface.TAG_ORIENTATION, "6")
+            setAttribute(ExifInterface.TAG_MODEL, "M")
+            setLatLong(1.0, 2.0)
+        }
+        val len = ((base[4].toInt() and 0xff) shl 8) or (base[5].toInt() and 0xff)
+        val r = Random(597)
+        val b = base.copyOf()
+        repeat(1 + r.nextInt(4)) { b[6 + r.nextInt(len - 2)] = r.nextInt(256).toByte() }
+        return b
+    }
+
     const val RED: Int = 0xFFFF0000.toInt()
     const val BLUE: Int = 0xFF0000FF.toInt()
 }

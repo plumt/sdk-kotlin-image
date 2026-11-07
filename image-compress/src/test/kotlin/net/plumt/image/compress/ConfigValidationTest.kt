@@ -51,8 +51,12 @@ class ConfigValidationTest {
         assertTrue(msg { targetBytes = 10; quality = 20; minQuality = 30 }.contains("minQuality(30)"))
     }
 
-    @Test fun 목표와_전략은_함께_못_쓴다() {
-        assertTrue(msg { targetBytes = 10; strategy = SinglePassStrategy }.contains("함께"))
+    @Test fun 목표와_전략은_나중에_대입한_것이_쓰인다() {
+        // 0.0.1 은 둘을 함께 주면 IAE 였다. 0.0.2 부터는 나중 값이 앞의 것을 비운다
+        assertTrue(ImageCompressor { targetBytes = 10; strategy = SinglePassStrategy }.config.strategy === SinglePassStrategy)
+        assertTrue(ImageCompressor { strategy = SinglePassStrategy; targetBytes = 10 }.config.strategy is TargetSizeStrategy)
+        assertTrue(ImageCompressor { targetBytes = 10; strategy = null }.config.strategy is TargetSizeStrategy)
+        assertTrue(ImageCompressor { strategy = SinglePassStrategy; targetBytes = null }.config.strategy === SinglePassStrategy)
     }
 
     @Test fun 목표를_지정하면_TargetSizeStrategy() {

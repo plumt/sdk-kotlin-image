@@ -19,6 +19,7 @@ public final class net/plumt/image/compress/CompressedImage {
 	public final fun getSizeInBytes ()I
 	public final fun getSourceHeight ()I
 	public final fun getSourceWidth ()I
+	public final fun getWarnings ()Ljava/util/Set;
 	public final fun getWidth ()I
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
@@ -44,6 +45,13 @@ public final class net/plumt/image/compress/CompressionProfiles {
 
 public abstract interface class net/plumt/image/compress/CompressionStrategy {
 	public abstract fun compress (Lnet/plumt/image/compress/EncodeContext;)Lnet/plumt/image/compress/EncodedImage;
+}
+
+public final class net/plumt/image/compress/CompressionWarning : java/lang/Enum {
+	public static final field EXIF_UNREADABLE Lnet/plumt/image/compress/CompressionWarning;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lnet/plumt/image/compress/CompressionWarning;
+	public static fun values ()[Lnet/plumt/image/compress/CompressionWarning;
 }
 
 public final class net/plumt/image/compress/CompressorConfig {

@@ -21,7 +21,8 @@ public fun interface Encoder {
         /** `Bitmap.compress` 기반 기본 인코더. */
         public val Default: Encoder = Encoder { bitmap, format, quality ->
             val out = ByteArrayOutputStream()
-            val ok = bitmap.compress(compressFormatFor(format, Build.VERSION.SDK_INT), quality, out)
+            val sdk = Build.VERSION.SDK_INT
+            val ok = bitmap.compress(compressFormatFor(format, sdk), platformQuality(format, quality, sdk), out)
             if (!ok) throw ImageEncodeException("Bitmap.compress 가 ${format.name} 인코딩에 실패했다(false 반환)")
             out.toByteArray()
         }
@@ -34,6 +35,18 @@ internal fun compressFormatFor(format: ImageFormat, sdkInt: Int): Bitmap.Compres
     ImageFormat.PNG -> Bitmap.CompressFormat.PNG
     ImageFormat.WEBP -> webp(lossless = false, sdkInt = sdkInt)
     ImageFormat.WEBP_LOSSLESS -> webp(lossless = true, sdkInt = sdkInt)
+}
+
+/**
+ * 플랫폼 인코더에 넘길 품질.
+ * - [ImageFormat.WEBP]: API 29 의 구형 `WEBP` 상수는 품질 100 을 **무손실**로 인코딩한다. 손실 WebP 를 약속했으므로 99 로 낮춘다
+ * - [ImageFormat.WEBP_LOSSLESS]: 항상 100. API 30+ 에서는 압축 노력(클수록 작고 느림)이고, API 29 의 구형 상수는 100 이어야 무손실이다
+ * - 그 밖: 그대로(PNG 는 플랫폼이 무시한다)
+ */
+internal fun platformQuality(format: ImageFormat, quality: Int, sdkInt: Int): Int = when (format) {
+    ImageFormat.WEBP -> if (sdkInt == Build.VERSION_CODES.Q && quality >= 100) 99 else quality
+    ImageFormat.WEBP_LOSSLESS -> 100
+    else -> quality
 }
 
 // sdkInt 를 인자로 받아 시험할 수 있게 했고, API 30 상수는 sdkInt >= R 분기 안에서만 읽는다

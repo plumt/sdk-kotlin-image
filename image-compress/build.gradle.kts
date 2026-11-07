@@ -13,11 +13,18 @@ android {
         // 23 미만 기기는 androidx ExifInterface 최소 요구(21)를 만족하지만, 이 SDK 는 23 을 하한으로 시험한다
         minSdk = 23
         consumerProguardFiles("consumer-rules.pro")
+        // 실기기 계측 테스트(connectedDebugAndroidTest). CI 는 기기가 없어 돌리지 않는다
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
+    }
+
+    // 실기기 테스트 입력 사진 폴더(저장소 밖). 지정하지 않으면 계측 테스트는 건너뛴다
+    providers.gradleProperty("deviceImageDir").orNull?.let { dir ->
+        sourceSets.getByName("androidTest").assets.srcDir(dir)
     }
 
     testOptions {
@@ -42,11 +49,19 @@ dependencies {
     api(libs.kotlinx.coroutines.core)
     // 방향 읽기·메타데이터 선별 보존. 공개 API 에 androidx 타입을 드러내지 않는다
     implementation(libs.androidx.exifinterface)
+    // @RequiresApi 만 쓴다. exifinterface 가 이미 런타임으로 끌어오는 것과 같은 버전이라 의존이 늘지 않는다
+    implementation(libs.androidx.annotation)
 
     testImplementation(libs.junit)
     testImplementation(libs.robolectric)
     testImplementation(libs.androidx.test.core)
     testImplementation(libs.kotlinx.coroutines.test)
+
+    androidTestImplementation(libs.junit)
+    androidTestImplementation(libs.androidx.test.runner)
+    androidTestImplementation(libs.androidx.test.ext.junit)
+    androidTestImplementation(libs.androidx.test.core)
+    androidTestImplementation(libs.androidx.exifinterface)
 }
 
 mavenPublishing {
