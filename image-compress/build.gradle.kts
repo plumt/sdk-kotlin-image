@@ -8,6 +8,8 @@ plugins {
 android {
     namespace = "net.plumt.image.compress"
     compileSdk = 36
+    // 소비 앱의 리소스와 이름이 겹치지 않게 접두어를 강제한다(지금은 리소스가 없다)
+    resourcePrefix = "image_"
 
     defaultConfig {
         // 23 미만 기기는 androidx ExifInterface 최소 요구(21)를 만족하지만, 이 SDK 는 23 을 하한으로 시험한다
@@ -34,11 +36,17 @@ android {
             it.systemProperty("kotlinx.coroutines.stacktrace.recovery", "false")
         }
     }
+
+    lint {
+        abortOnError = true
+    }
 }
 
 kotlin {
     compilerOptions {
         jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_11)
+        // 공개 인터페이스의 기본 구현을 Java 기본 메서드로만 낸다(DefaultImpls 없음) — 인터페이스에 함수를 더해도 구현체가 깨지지 않는다
+        jvmDefault.set(org.jetbrains.kotlin.gradle.dsl.JvmDefaultMode.NO_COMPATIBILITY)
     }
     // 가시성을 적지 않은 선언은 컴파일 오류 — 공개 API 는 의도한 것만 연다
     explicitApi()
@@ -47,6 +55,8 @@ kotlin {
 dependencies {
     // suspend·CoroutineDispatcher 가 공개 API 에 나오므로 api 로 노출한다
     api(libs.kotlinx.coroutines.core)
+    // 콜백 형태가 결과를 메인 스레드(Dispatchers.Main)로 준다. 공개 API 에는 나오지 않는다
+    implementation(libs.kotlinx.coroutines.android)
     // 방향 읽기·메타데이터 선별 보존. 공개 API 에 androidx 타입을 드러내지 않는다
     implementation(libs.androidx.exifinterface)
     // @RequiresApi 만 쓴다. exifinterface 가 이미 런타임으로 끌어오는 것과 같은 버전이라 의존이 늘지 않는다
@@ -91,4 +101,9 @@ kover {
             }
         }
     }
+}
+
+// 라인 커버리지 90% 미만이면 check(=build) 가 실패한다
+tasks.named("check") {
+    dependsOn("koverVerify")
 }

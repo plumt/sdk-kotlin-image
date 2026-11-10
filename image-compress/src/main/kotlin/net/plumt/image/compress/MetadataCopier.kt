@@ -13,44 +13,8 @@ internal class MetadataSnapshot(val attributes: Map<String, String>) {
 }
 
 internal object MetadataCopier {
-    private val groupTags: Map<MetadataGroup, List<String>> = mapOf(
-        MetadataGroup.LOCATION to listOf(
-            ExifInterface.TAG_GPS_VERSION_ID, ExifInterface.TAG_GPS_LATITUDE_REF, ExifInterface.TAG_GPS_LATITUDE,
-            ExifInterface.TAG_GPS_LONGITUDE_REF, ExifInterface.TAG_GPS_LONGITUDE, ExifInterface.TAG_GPS_ALTITUDE_REF,
-            ExifInterface.TAG_GPS_ALTITUDE, ExifInterface.TAG_GPS_TIMESTAMP, ExifInterface.TAG_GPS_DATESTAMP,
-            ExifInterface.TAG_GPS_SATELLITES, ExifInterface.TAG_GPS_STATUS, ExifInterface.TAG_GPS_MEASURE_MODE,
-            ExifInterface.TAG_GPS_DOP, ExifInterface.TAG_GPS_SPEED_REF, ExifInterface.TAG_GPS_SPEED,
-            ExifInterface.TAG_GPS_TRACK_REF, ExifInterface.TAG_GPS_TRACK, ExifInterface.TAG_GPS_IMG_DIRECTION_REF,
-            ExifInterface.TAG_GPS_IMG_DIRECTION, ExifInterface.TAG_GPS_MAP_DATUM, ExifInterface.TAG_GPS_DEST_LATITUDE_REF,
-            ExifInterface.TAG_GPS_DEST_LATITUDE, ExifInterface.TAG_GPS_DEST_LONGITUDE_REF,
-            ExifInterface.TAG_GPS_DEST_LONGITUDE, ExifInterface.TAG_GPS_DEST_BEARING_REF,
-            ExifInterface.TAG_GPS_DEST_BEARING, ExifInterface.TAG_GPS_DEST_DISTANCE_REF,
-            ExifInterface.TAG_GPS_DEST_DISTANCE, ExifInterface.TAG_GPS_PROCESSING_METHOD,
-            ExifInterface.TAG_GPS_AREA_INFORMATION, ExifInterface.TAG_GPS_DIFFERENTIAL,
-        ),
-        MetadataGroup.CAPTURE_TIME to listOf(
-            ExifInterface.TAG_DATETIME, ExifInterface.TAG_DATETIME_ORIGINAL, ExifInterface.TAG_DATETIME_DIGITIZED,
-            ExifInterface.TAG_OFFSET_TIME, ExifInterface.TAG_OFFSET_TIME_ORIGINAL,
-            ExifInterface.TAG_OFFSET_TIME_DIGITIZED, ExifInterface.TAG_SUBSEC_TIME,
-            ExifInterface.TAG_SUBSEC_TIME_ORIGINAL, ExifInterface.TAG_SUBSEC_TIME_DIGITIZED,
-        ),
-        MetadataGroup.CAMERA to listOf(
-            ExifInterface.TAG_MAKE, ExifInterface.TAG_MODEL, ExifInterface.TAG_SOFTWARE,
-            ExifInterface.TAG_LENS_MAKE, ExifInterface.TAG_LENS_MODEL,
-        ),
-        MetadataGroup.EXPOSURE to listOf(
-            ExifInterface.TAG_EXPOSURE_TIME, ExifInterface.TAG_F_NUMBER, ExifInterface.TAG_EXPOSURE_PROGRAM,
-            ExifInterface.TAG_PHOTOGRAPHIC_SENSITIVITY, ExifInterface.TAG_EXPOSURE_BIAS_VALUE,
-            ExifInterface.TAG_APERTURE_VALUE, ExifInterface.TAG_SHUTTER_SPEED_VALUE,
-            ExifInterface.TAG_BRIGHTNESS_VALUE, ExifInterface.TAG_METERING_MODE, ExifInterface.TAG_FLASH,
-            ExifInterface.TAG_FOCAL_LENGTH, ExifInterface.TAG_FOCAL_LENGTH_IN_35MM_FILM,
-            ExifInterface.TAG_WHITE_BALANCE,
-        ),
-        MetadataGroup.COPYRIGHT to listOf(ExifInterface.TAG_COPYRIGHT, ExifInterface.TAG_ARTIST),
-    )
-
     /** [groups] 에 해당하는 태그 이름. 켠 묶음이 없으면 빈 목록이다. */
-    fun tagsFor(groups: Set<MetadataGroup>): List<String> = groups.flatMap { groupTags.getValue(it) }
+    fun tagsFor(groups: Set<MetadataGroup>): List<String> = groups.flatMap { it.tags }
 
     /**
      * 인코딩된 [encoded] 에 [snapshot] 을 쓴 새 바이트를 돌려준다. ExifInterface 는 파일에만 쓸 수 있어

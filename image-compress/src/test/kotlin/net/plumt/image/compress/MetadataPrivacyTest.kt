@@ -39,7 +39,7 @@ class MetadataPrivacyTest {
 
     private fun exif(b: ByteArray) = ExifInterface(ByteArrayInputStream(b))
     private fun contains(b: ByteArray, s: String) = String(b, Charsets.ISO_8859_1).contains(s)
-    private fun compress(block: ImageCompressorBuilder.() -> Unit) = runBlocking { ImageCompressor(block = block).compress(tagged) }
+    private fun compress(block: ImageCompressorBuilder.() -> Unit) = runBlocking { ImageCompressor(block = block).compressOrThrow(tagged) }
 
     @Test fun 시험_입력에는_실제로_메타데이터가_들어있다() {
         val e = exif(tagged)
@@ -75,7 +75,7 @@ class MetadataPrivacyTest {
     }
 
     @Test fun 모든_형식에서_제거된다() {
-        for (f in ImageFormat.values()) {
+        for (f in ImageFormat.values) {
             val r = compress { format = f }
             assertFalse("$f 에 문구 남음", contains(r.data, marker))
             assertFalse("$f 에 GPS 남음", contains(r.data, "AcmeCam"))
@@ -123,7 +123,7 @@ class MetadataPrivacyTest {
     }
 
     @Test fun 어떤_묶음을_켜도_일련번호_사용자코멘트_방향은_복사하지_않는다() {
-        val r = compress { preserveMetadata = MetadataGroup.values().toSet() }
+        val r = compress { preserveMetadata = MetadataGroup.values.toSet() }
         val e = exif(r.data)
         assertNull(e.getAttribute(ExifInterface.TAG_BODY_SERIAL_NUMBER))
         assertNull(e.getAttribute(ExifInterface.TAG_USER_COMMENT))
@@ -134,10 +134,10 @@ class MetadataPrivacyTest {
 
     @Test fun 원본에_없는_묶음을_켜도_실패하지_않고_결과는_제거_상태와_같다() {
         val plain = TestImages.noisyJpeg(100, 100)
-        val r = runBlocking { ImageCompressor { preserveMetadata = setOf(MetadataGroup.LOCATION) }.compress(plain) }
+        val r = runBlocking { ImageCompressor { preserveMetadata = setOf(MetadataGroup.LOCATION) }.compressOrThrow(plain) }
         assertNull(exif(r.data).latLong)
         assertTrue(r.preservedMetadata.isEmpty())
-        val stripped = runBlocking { ImageCompressor().compress(plain) }
+        val stripped = runBlocking { ImageCompressor().compressOrThrow(plain) }
         assertArrayEquals(stripped.data, r.data)
     }
 

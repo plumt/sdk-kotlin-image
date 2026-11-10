@@ -50,8 +50,11 @@ public class ResizePlan(
 public class FitResizer(
     public val maxWidth: Int,
     public val maxHeight: Int,
-    public val allowUpscale: Boolean = false,
+    public val allowUpscale: Boolean,
 ) : Resizer {
+    /** 확대하지 않는 규칙. */
+    public constructor(maxWidth: Int, maxHeight: Int) : this(maxWidth, maxHeight, false)
+
     init {
         require(maxWidth > 0 && maxHeight > 0) { "최대 크기는 1 이상이어야 한다: ${maxWidth}x$maxHeight" }
     }
@@ -67,12 +70,15 @@ public class FitResizer(
 
 /**
  * 짧은 변 기준 가운데 정사각형을 잘라 [size]x[size] 로 맞춘다. 원본의 짧은 변이 [size] 보다 작으면
- * [allowUpscale] 이 false(기본)인 한 그 변 길이의 정사각형이 되고, true 면 [size] 로 키운다.
+ * [allowUpscale] 이 false 인 한 그 변 길이의 정사각형이 되고, true 면 [size] 로 키운다.
  */
 public class CenterSquareResizer(
     public val size: Int,
-    public val allowUpscale: Boolean = false,
+    public val allowUpscale: Boolean,
 ) : Resizer {
+    /** 확대하지 않는 규칙. */
+    public constructor(size: Int) : this(size, false)
+
     init {
         require(size > 0) { "정사각 크기는 1 이상이어야 한다: $size" }
     }

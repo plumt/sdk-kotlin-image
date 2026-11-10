@@ -1,6 +1,6 @@
 public final class net/plumt/image/compress/CenterSquareResizer : net/plumt/image/compress/Resizer {
+	public fun <init> (I)V
 	public fun <init> (IZ)V
-	public synthetic fun <init> (IZILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun getAllowUpscale ()Z
 	public final fun getSize ()I
 	public fun plan (II)Lnet/plumt/image/compress/ResizePlan;
@@ -23,11 +23,15 @@ public final class net/plumt/image/compress/CompressedImage {
 	public final fun getWidth ()I
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
-	public final fun writeTo (Landroid/content/ContentResolver;Landroid/net/Uri;Lkotlinx/coroutines/CoroutineDispatcher;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
-	public final fun writeTo (Ljava/io/File;Lkotlinx/coroutines/CoroutineDispatcher;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
-	public final fun writeTo (Ljava/io/OutputStream;)V
-	public static synthetic fun writeTo$default (Lnet/plumt/image/compress/CompressedImage;Landroid/content/ContentResolver;Landroid/net/Uri;Lkotlinx/coroutines/CoroutineDispatcher;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
-	public static synthetic fun writeTo$default (Lnet/plumt/image/compress/CompressedImage;Ljava/io/File;Lkotlinx/coroutines/CoroutineDispatcher;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+}
+
+public abstract interface class net/plumt/image/compress/CompressionCallHandle {
+	public abstract fun cancel ()V
+	public abstract fun isActive ()Z
+}
+
+public abstract interface class net/plumt/image/compress/CompressionCallback {
+	public abstract fun onResult (Lnet/plumt/image/compress/CompressionResult;)V
 }
 
 public final class net/plumt/image/compress/CompressionProfile {
@@ -37,24 +41,49 @@ public final class net/plumt/image/compress/CompressionProfile {
 }
 
 public final class net/plumt/image/compress/CompressionProfiles {
+	public static final field Avatar Lnet/plumt/image/compress/CompressionProfile;
 	public static final field INSTANCE Lnet/plumt/image/compress/CompressionProfiles;
-	public final fun getAvatar ()Lnet/plumt/image/compress/CompressionProfile;
-	public final fun getThumbnail ()Lnet/plumt/image/compress/CompressionProfile;
-	public final fun getUpload ()Lnet/plumt/image/compress/CompressionProfile;
+	public static final field Thumbnail Lnet/plumt/image/compress/CompressionProfile;
+	public static final field Upload Lnet/plumt/image/compress/CompressionProfile;
+}
+
+public abstract interface class net/plumt/image/compress/CompressionResult {
+}
+
+public final class net/plumt/image/compress/CompressionResult$Failure : net/plumt/image/compress/CompressionResult {
+	public fun <init> (Lnet/plumt/image/compress/ImageCompressionException;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getError ()Lnet/plumt/image/compress/ImageCompressionException;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/plumt/image/compress/CompressionResult$Success : net/plumt/image/compress/CompressionResult {
+	public fun <init> (Lnet/plumt/image/compress/CompressedImage;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getImage ()Lnet/plumt/image/compress/CompressedImage;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
 }
 
 public abstract interface class net/plumt/image/compress/CompressionStrategy {
 	public abstract fun compress (Lnet/plumt/image/compress/EncodeContext;)Lnet/plumt/image/compress/EncodedImage;
 }
 
-public final class net/plumt/image/compress/CompressionWarning : java/lang/Enum {
+public final class net/plumt/image/compress/CompressionWarning {
+	public static final field Companion Lnet/plumt/image/compress/CompressionWarning$Companion;
 	public static final field EXIF_UNREADABLE Lnet/plumt/image/compress/CompressionWarning;
-	public static fun getEntries ()Lkotlin/enums/EnumEntries;
-	public static fun valueOf (Ljava/lang/String;)Lnet/plumt/image/compress/CompressionWarning;
-	public static fun values ()[Lnet/plumt/image/compress/CompressionWarning;
+	public final fun getName ()Ljava/lang/String;
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/plumt/image/compress/CompressionWarning$Companion {
+	public final fun getValues ()Ljava/util/List;
 }
 
 public final class net/plumt/image/compress/CompressorConfig {
+	public static final field Companion Lnet/plumt/image/compress/CompressorConfig$Companion;
+	public static final fun builder ()Lnet/plumt/image/compress/CompressorConfig$Builder;
 	public final fun getBackgroundColor ()I
 	public final fun getDispatcher ()Lkotlinx/coroutines/CoroutineDispatcher;
 	public final fun getEncoder ()Lnet/plumt/image/compress/Encoder;
@@ -64,7 +93,39 @@ public final class net/plumt/image/compress/CompressorConfig {
 	public final fun getQuality ()I
 	public final fun getResizer ()Lnet/plumt/image/compress/Resizer;
 	public final fun getStrategy ()Lnet/plumt/image/compress/CompressionStrategy;
+	public final fun toBuilder ()Lnet/plumt/image/compress/CompressorConfig$Builder;
 	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/plumt/image/compress/CompressorConfig$Builder {
+	public static final field DEFAULT_BACKGROUND I
+	public static final field DEFAULT_MAX_DIMENSION I
+	public static final field DEFAULT_MAX_PIXELS J
+	public static final field DEFAULT_QUALITY I
+	public final fun backgroundColor (I)Lnet/plumt/image/compress/CompressorConfig$Builder;
+	public final fun build ()Lnet/plumt/image/compress/CompressorConfig;
+	public final fun centerSquare (I)Lnet/plumt/image/compress/CompressorConfig$Builder;
+	public final fun centerSquare (IZ)Lnet/plumt/image/compress/CompressorConfig$Builder;
+	public final fun dimensionStep (F)Lnet/plumt/image/compress/CompressorConfig$Builder;
+	public final fun dispatcher (Lkotlinx/coroutines/CoroutineDispatcher;)Lnet/plumt/image/compress/CompressorConfig$Builder;
+	public final fun encoder (Lnet/plumt/image/compress/Encoder;)Lnet/plumt/image/compress/CompressorConfig$Builder;
+	public final fun format (Lnet/plumt/image/compress/ImageFormat;)Lnet/plumt/image/compress/CompressorConfig$Builder;
+	public final fun maxDimension (I)Lnet/plumt/image/compress/CompressorConfig$Builder;
+	public final fun maxHeight (I)Lnet/plumt/image/compress/CompressorConfig$Builder;
+	public final fun maxPixels (J)Lnet/plumt/image/compress/CompressorConfig$Builder;
+	public final fun maxWidth (I)Lnet/plumt/image/compress/CompressorConfig$Builder;
+	public final fun minDimension (I)Lnet/plumt/image/compress/CompressorConfig$Builder;
+	public final fun minQuality (I)Lnet/plumt/image/compress/CompressorConfig$Builder;
+	public final fun preserveMetadata (Ljava/util/Set;)Lnet/plumt/image/compress/CompressorConfig$Builder;
+	public final fun profile (Lnet/plumt/image/compress/CompressionProfile;)Lnet/plumt/image/compress/CompressorConfig$Builder;
+	public final fun quality (I)Lnet/plumt/image/compress/CompressorConfig$Builder;
+	public final fun resizer (Lnet/plumt/image/compress/Resizer;)Lnet/plumt/image/compress/CompressorConfig$Builder;
+	public final fun strategy (Lnet/plumt/image/compress/CompressionStrategy;)Lnet/plumt/image/compress/CompressorConfig$Builder;
+	public final fun targetBytes (Ljava/lang/Long;)Lnet/plumt/image/compress/CompressorConfig$Builder;
+}
+
+public final class net/plumt/image/compress/CompressorConfig$Companion {
+	public final fun builder ()Lnet/plumt/image/compress/CompressorConfig$Builder;
 }
 
 public abstract interface class net/plumt/image/compress/EncodeContext {
@@ -88,16 +149,35 @@ public final class net/plumt/image/compress/EncodedImage {
 
 public abstract interface class net/plumt/image/compress/Encoder {
 	public static final field Companion Lnet/plumt/image/compress/Encoder$Companion;
+	public static final field Default Lnet/plumt/image/compress/Encoder;
 	public abstract fun encode (Landroid/graphics/Bitmap;Lnet/plumt/image/compress/ImageFormat;I)[B
 }
 
 public final class net/plumt/image/compress/Encoder$Companion {
-	public final fun getDefault ()Lnet/plumt/image/compress/Encoder;
+}
+
+public final class net/plumt/image/compress/FakeImageCompressor : net/plumt/image/compress/ImageCompressor {
+	public fun <init> ()V
+	public fun <init> (Lnet/plumt/image/compress/CompressorConfig;)V
+	public fun compress (Lnet/plumt/image/compress/ImageSource;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public fun compress (Lnet/plumt/image/compress/ImageSource;Lnet/plumt/image/compress/CompressionCallback;)Lnet/plumt/image/compress/CompressionCallHandle;
+	public fun compress (Lnet/plumt/image/compress/ImageSource;Lnet/plumt/image/compress/ImageTarget;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public fun compress (Lnet/plumt/image/compress/ImageSource;Lnet/plumt/image/compress/ImageTarget;Lnet/plumt/image/compress/CompressionCallback;)Lnet/plumt/image/compress/CompressionCallHandle;
+	public final fun failWith (Lnet/plumt/image/compress/ImageCompressionException;)V
+	public final fun failWithDecodeError (Ljava/lang/String;)V
+	public final fun failWithIoError (Ljava/lang/String;)V
+	public final fun failWithOutOfMemory (Ljava/lang/String;)V
+	public final fun getCalls ()I
+	public fun getConfig ()Lnet/plumt/image/compress/CompressorConfig;
+	public final fun getSources ()Ljava/util/List;
+	public final fun respondWith ([BII)V
+	public final fun succeed ()V
+	public fun toString ()Ljava/lang/String;
 }
 
 public final class net/plumt/image/compress/FitResizer : net/plumt/image/compress/Resizer {
+	public fun <init> (II)V
 	public fun <init> (IIZ)V
-	public synthetic fun <init> (IIZILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun getAllowUpscale ()Z
 	public final fun getMaxHeight ()I
 	public final fun getMaxWidth ()I
@@ -109,82 +189,45 @@ public abstract class net/plumt/image/compress/ImageCompressionException : java/
 }
 
 public abstract interface class net/plumt/image/compress/ImageCompressor {
+	public static final field Companion Lnet/plumt/image/compress/ImageCompressor$Companion;
 	public abstract fun compress (Lnet/plumt/image/compress/ImageSource;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public fun compress (Lnet/plumt/image/compress/ImageSource;Lnet/plumt/image/compress/CompressionCallback;)Lnet/plumt/image/compress/CompressionCallHandle;
+	public abstract fun compress (Lnet/plumt/image/compress/ImageSource;Lnet/plumt/image/compress/ImageTarget;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public fun compress (Lnet/plumt/image/compress/ImageSource;Lnet/plumt/image/compress/ImageTarget;Lnet/plumt/image/compress/CompressionCallback;)Lnet/plumt/image/compress/CompressionCallHandle;
+	public static fun create ()Lnet/plumt/image/compress/ImageCompressor;
+	public static fun create (Lnet/plumt/image/compress/CompressorConfig;)Lnet/plumt/image/compress/ImageCompressor;
 	public abstract fun getConfig ()Lnet/plumt/image/compress/CompressorConfig;
 }
 
-public final class net/plumt/image/compress/ImageCompressorBuilder {
-	public static final field DEFAULT_MAX_DIMENSION I
-	public static final field DEFAULT_MAX_PIXELS J
-	public final fun centerSquare (IZ)V
-	public static synthetic fun centerSquare$default (Lnet/plumt/image/compress/ImageCompressorBuilder;IZILjava/lang/Object;)V
-	public final fun getBackgroundColor ()I
-	public final fun getDimensionStep ()F
-	public final fun getDispatcher ()Lkotlinx/coroutines/CoroutineDispatcher;
-	public final fun getEncoder ()Lnet/plumt/image/compress/Encoder;
-	public final fun getFormat ()Lnet/plumt/image/compress/ImageFormat;
-	public final fun getMaxDimension ()I
-	public final fun getMaxHeight ()I
-	public final fun getMaxPixels ()J
-	public final fun getMaxWidth ()I
-	public final fun getMinDimension ()I
-	public final fun getMinQuality ()I
-	public final fun getPreserveMetadata ()Ljava/util/Set;
-	public final fun getQuality ()I
-	public final fun getResizer ()Lnet/plumt/image/compress/Resizer;
-	public final fun getStrategy ()Lnet/plumt/image/compress/CompressionStrategy;
-	public final fun getTargetBytes ()Ljava/lang/Long;
-	public final fun profile (Lnet/plumt/image/compress/CompressionProfile;)V
-	public final fun setBackgroundColor (I)V
-	public final fun setDimensionStep (F)V
-	public final fun setDispatcher (Lkotlinx/coroutines/CoroutineDispatcher;)V
-	public final fun setEncoder (Lnet/plumt/image/compress/Encoder;)V
-	public final fun setFormat (Lnet/plumt/image/compress/ImageFormat;)V
-	public final fun setMaxDimension (I)V
-	public final fun setMaxHeight (I)V
-	public final fun setMaxPixels (J)V
-	public final fun setMaxWidth (I)V
-	public final fun setMinDimension (I)V
-	public final fun setMinQuality (I)V
-	public final fun setPreserveMetadata (Ljava/util/Set;)V
-	public final fun setQuality (I)V
-	public final fun setResizer (Lnet/plumt/image/compress/Resizer;)V
-	public final fun setStrategy (Lnet/plumt/image/compress/CompressionStrategy;)V
-	public final fun setTargetBytes (Ljava/lang/Long;)V
-}
-
-public final class net/plumt/image/compress/ImageCompressorKt {
-	public static final fun ImageCompressor (Lkotlin/jvm/functions/Function1;)Lnet/plumt/image/compress/ImageCompressor;
-	public static final fun ImageCompressor (Lnet/plumt/image/compress/CompressionProfile;Lkotlin/jvm/functions/Function1;)Lnet/plumt/image/compress/ImageCompressor;
-	public static synthetic fun ImageCompressor$default (Lkotlin/jvm/functions/Function1;ILjava/lang/Object;)Lnet/plumt/image/compress/ImageCompressor;
-	public static synthetic fun ImageCompressor$default (Lnet/plumt/image/compress/CompressionProfile;Lkotlin/jvm/functions/Function1;ILjava/lang/Object;)Lnet/plumt/image/compress/ImageCompressor;
-	public static final fun compress (Lnet/plumt/image/compress/ImageCompressor;Landroid/content/ContentResolver;Landroid/net/Uri;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
-	public static final fun compress (Lnet/plumt/image/compress/ImageCompressor;Ljava/io/File;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
-	public static final fun compress (Lnet/plumt/image/compress/ImageCompressor;Ljava/io/InputStream;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
-	public static final fun compress (Lnet/plumt/image/compress/ImageCompressor;[BLkotlin/coroutines/Continuation;)Ljava/lang/Object;
-	public static final fun compressToFile (Lnet/plumt/image/compress/ImageCompressor;Lnet/plumt/image/compress/ImageSource;Ljava/io/File;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
-	public static final fun compressToUri (Lnet/plumt/image/compress/ImageCompressor;Lnet/plumt/image/compress/ImageSource;Landroid/content/ContentResolver;Landroid/net/Uri;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+public final class net/plumt/image/compress/ImageCompressor$Companion {
+	public final fun create ()Lnet/plumt/image/compress/ImageCompressor;
+	public final fun create (Lnet/plumt/image/compress/CompressorConfig;)Lnet/plumt/image/compress/ImageCompressor;
 }
 
 public final class net/plumt/image/compress/ImageDecodeException : net/plumt/image/compress/ImageCompressionException {
 }
 
 public final class net/plumt/image/compress/ImageEncodeException : net/plumt/image/compress/ImageCompressionException {
+	public fun <init> (Ljava/lang/String;)V
 	public fun <init> (Ljava/lang/String;Ljava/lang/Throwable;)V
-	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/Throwable;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 }
 
-public final class net/plumt/image/compress/ImageFormat : java/lang/Enum {
+public final class net/plumt/image/compress/ImageFormat {
+	public static final field Companion Lnet/plumt/image/compress/ImageFormat$Companion;
 	public static final field JPEG Lnet/plumt/image/compress/ImageFormat;
 	public static final field PNG Lnet/plumt/image/compress/ImageFormat;
 	public static final field WEBP Lnet/plumt/image/compress/ImageFormat;
 	public static final field WEBP_LOSSLESS Lnet/plumt/image/compress/ImageFormat;
-	public static fun getEntries ()Lkotlin/enums/EnumEntries;
 	public final fun getExtension ()Ljava/lang/String;
 	public final fun getMimeType ()Ljava/lang/String;
+	public final fun getName ()Ljava/lang/String;
+	public final fun getSupportsAlpha ()Z
 	public final fun getSupportsQuality ()Z
-	public static fun valueOf (Ljava/lang/String;)Lnet/plumt/image/compress/ImageFormat;
-	public static fun values ()[Lnet/plumt/image/compress/ImageFormat;
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/plumt/image/compress/ImageFormat$Companion {
+	public final fun getValues ()Ljava/util/List;
 }
 
 public final class net/plumt/image/compress/ImageIoException : net/plumt/image/compress/ImageCompressionException {
@@ -203,20 +246,35 @@ public final class net/plumt/image/compress/ImageSource$Companion {
 	public static final field DEFAULT_MAX_STREAM_BYTES J
 	public final fun bytes ([B)Lnet/plumt/image/compress/ImageSource;
 	public final fun file (Ljava/io/File;)Lnet/plumt/image/compress/ImageSource;
+	public final fun stream (Ljava/io/InputStream;)Lnet/plumt/image/compress/ImageSource;
 	public final fun stream (Ljava/io/InputStream;J)Lnet/plumt/image/compress/ImageSource;
-	public static synthetic fun stream$default (Lnet/plumt/image/compress/ImageSource$Companion;Ljava/io/InputStream;JILjava/lang/Object;)Lnet/plumt/image/compress/ImageSource;
 	public final fun uri (Landroid/content/ContentResolver;Landroid/net/Uri;)Lnet/plumt/image/compress/ImageSource;
 }
 
-public final class net/plumt/image/compress/MetadataGroup : java/lang/Enum {
+public abstract interface class net/plumt/image/compress/ImageTarget {
+	public static final field Companion Lnet/plumt/image/compress/ImageTarget$Companion;
+	public abstract fun write ([B)V
+}
+
+public final class net/plumt/image/compress/ImageTarget$Companion {
+	public final fun file (Ljava/io/File;)Lnet/plumt/image/compress/ImageTarget;
+	public final fun stream (Ljava/io/OutputStream;)Lnet/plumt/image/compress/ImageTarget;
+	public final fun uri (Landroid/content/ContentResolver;Landroid/net/Uri;)Lnet/plumt/image/compress/ImageTarget;
+}
+
+public final class net/plumt/image/compress/MetadataGroup {
 	public static final field CAMERA Lnet/plumt/image/compress/MetadataGroup;
 	public static final field CAPTURE_TIME Lnet/plumt/image/compress/MetadataGroup;
 	public static final field COPYRIGHT Lnet/plumt/image/compress/MetadataGroup;
+	public static final field Companion Lnet/plumt/image/compress/MetadataGroup$Companion;
 	public static final field EXPOSURE Lnet/plumt/image/compress/MetadataGroup;
 	public static final field LOCATION Lnet/plumt/image/compress/MetadataGroup;
-	public static fun getEntries ()Lkotlin/enums/EnumEntries;
-	public static fun valueOf (Ljava/lang/String;)Lnet/plumt/image/compress/MetadataGroup;
-	public static fun values ()[Lnet/plumt/image/compress/MetadataGroup;
+	public final fun getName ()Ljava/lang/String;
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/plumt/image/compress/MetadataGroup$Companion {
+	public final fun getValues ()Ljava/util/List;
 }
 
 public final class net/plumt/image/compress/ResizePlan {
@@ -257,8 +315,8 @@ public final class net/plumt/image/compress/TargetSizeStrategy : net/plumt/image
 	public static final field DEFAULT_DIMENSION_STEP F
 	public static final field DEFAULT_MIN_DIMENSION I
 	public static final field DEFAULT_MIN_QUALITY I
+	public fun <init> (J)V
 	public fun <init> (JIFI)V
-	public synthetic fun <init> (JIFIILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public fun compress (Lnet/plumt/image/compress/EncodeContext;)Lnet/plumt/image/compress/EncodedImage;
 	public final fun getDimensionStep ()F
 	public final fun getMinDimension ()I

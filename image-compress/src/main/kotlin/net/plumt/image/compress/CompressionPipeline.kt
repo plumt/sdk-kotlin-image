@@ -83,7 +83,7 @@ internal class CompressionPipeline(
         // 5. 방향·자르기·축소·8비트 변환을 한 번에 — 회전한 전체 사본을 따로 만들지 않는다
         var bitmap = tracker.replace(sampled, transform(sampled, orientation, plan, orientedW, orientedH))
         // 6. 알파 합성
-        if (!config.format.supportsAlpha() && bitmap.hasAlpha()) {
+        if (!config.format.supportsAlpha && bitmap.hasAlpha()) {
             bitmap = tracker.replace(bitmap, flatten(bitmap))
         }
         dropGainmap(bitmap, sdkInt)
@@ -126,8 +126,6 @@ internal class CompressionPipeline(
             }
         }
     }
-
-    private fun ImageFormat.supportsAlpha(): Boolean = this != ImageFormat.JPEG
 
     private fun checkedPlan(plan: ResizePlan, w: Int, h: Int): ResizePlan {
         require(plan.cropLeft + plan.cropWidth <= w && plan.cropTop + plan.cropHeight <= h) {

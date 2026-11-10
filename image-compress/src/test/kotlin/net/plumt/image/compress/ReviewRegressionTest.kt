@@ -46,7 +46,7 @@ class ReviewRegressionTest {
         val broken = TestImages.corruptExifJpeg()
         // 픽셀 자체는 멀쩡하다
         assertTrue(BitmapFactory.decodeByteArray(broken, 0, broken.size) != null)
-        val r = run { ImageCompressor { maxDimension = 1000 }.compress(broken) }
+        val r = run { ImageCompressor { maxDimension = 1000 }.compressOrThrow(broken) }
         assertEquals(64, r.width)
         assertEquals(48, r.height)
     }
@@ -55,14 +55,14 @@ class ReviewRegressionTest {
         val source = object : ImageSource {
             override fun open(): InputStream = throw SecurityException("권한 없음")
         }
-        val e = assertThrows(ImageIoException::class.java) { run { ImageCompressor().compress(source) } }
+        val e = assertThrows(ImageIoException::class.java) { run { ImageCompressor().compressOrThrow(source) } }
         assertTrue(e.cause is SecurityException)
     }
 
     @Test fun 만료된_content_URI_권한은_ImageIoException() {
         FileBackedProvider.reset(tmp.newFile("in.jpg").apply { writeBytes(jpeg) })
         FileBackedProvider.failure = { throw SecurityException("URI 권한 만료") }
-        val e = assertThrows(ImageIoException::class.java) { run { ImageCompressor().compress(resolver, FileBackedProvider.uri) } }
+        val e = assertThrows(ImageIoException::class.java) { run { ImageCompressor().compressOrThrow(resolver, FileBackedProvider.uri) } }
         assertTrue(e.cause is SecurityException)
     }
 
@@ -75,7 +75,7 @@ class ReviewRegressionTest {
             format = ImageFormat.PNG
             encoder = Encoder { b, f, q -> configs.add(b.config); Encoder.Default.encode(b, f, q) }
         }
-        val r = run { c.compress(png) }
+        val r = run { c.compressOrThrow(png) }
         assertEquals(listOf(Bitmap.Config.ARGB_8888), configs)
         assertEquals(8, Png16.bitDepth(r.data))
         val d = BitmapFactory.decodeByteArray(r.data, 0, r.data.size)
@@ -87,7 +87,7 @@ class ReviewRegressionTest {
 
     @Test fun content_URI_는_한_번만_연다() {
         FileBackedProvider.reset(tmp.newFile("in.jpg").apply { writeBytes(jpeg) })
-        val r = run { ImageCompressor { maxDimension = 400; preserveMetadata = setOf(MetadataGroup.CAMERA) }.compress(resolver, FileBackedProvider.uri) }
+        val r = run { ImageCompressor { maxDimension = 400; preserveMetadata = setOf(MetadataGroup.CAMERA) }.compressOrThrow(resolver, FileBackedProvider.uri) }
         assertEquals(400, r.width)
         assertEquals(listOf("r"), FileBackedProvider.modes.toList())
     }
@@ -98,7 +98,7 @@ class ReviewRegressionTest {
         val out = tmp.newFile("out.jpg").apply { writeBytes(ByteArray(500_000) { 7 }) }
         FileBackedProvider.reset(out)
         FileBackedProvider.failure = { mode -> if (mode.contains('t')) throw IllegalArgumentException("지원하지 않는 모드: $mode") }
-        val r = run { ImageCompressor { maxDimension = 100 }.compress(jpeg) }
+        val r = run { ImageCompressor { maxDimension = 100 }.compressOrThrow(jpeg) }
         run { r.writeTo(resolver, FileBackedProvider.uri) }
         assertArrayEquals(r.data, out.readBytes())
     }
@@ -106,7 +106,7 @@ class ReviewRegressionTest {
     @Test fun provider_의_런타임_예외는_ImageIoException() {
         FileBackedProvider.reset(tmp.newFile("out.jpg"))
         FileBackedProvider.failure = { throw IllegalStateException("provider 고장") }
-        val r = run { ImageCompressor { maxDimension = 100 }.compress(jpeg) }
+        val r = run { ImageCompressor { maxDimension = 100 }.compressOrThrow(jpeg) }
         val e = assertThrows(ImageIoException::class.java) { run { r.writeTo(resolver, FileBackedProvider.uri) } }
         assertTrue(e.cause is IllegalStateException)
     }
@@ -120,7 +120,7 @@ class ReviewRegressionTest {
             targetBytes = 1
             encoder = Encoder { b, _, q -> attempts++; ByteArray(maxOf(2, b.width * b.height * q / 1000)) }
         }
-        val e = assertThrows(TargetSizeNotReachedException::class.java) { run { c.compress(TestImages.noisyJpeg(1920, 1080)) } }
+        val e = assertThrows(TargetSizeNotReachedException::class.java) { run { c.compressOrThrow(TestImages.noisyJpeg(1920, 1080)) } }
         assertEquals(64, maxOf(e.width, e.height))
         assertTrue("인코딩 $attempts 회", attempts <= 6)
     }
@@ -132,7 +132,7 @@ class ReviewRegressionTest {
             setAttribute(ExifInterface.TAG_MODEL, "TestModel")
             setAttribute(ExifInterface.TAG_ORIENTATION, "6")
         }
-        val r = run { ImageCompressor { preserveMetadata = setOf(MetadataGroup.CAMERA) }.compress(tagged) }
+        val r = run { ImageCompressor { preserveMetadata = setOf(MetadataGroup.CAMERA) }.compressOrThrow(tagged) }
         val exif = ExifInterface(ByteArrayInputStream(r.data))
         assertEquals("TestModel", exif.getAttribute(ExifInterface.TAG_MODEL))
         assertEquals("1", exif.getAttribute(ExifInterface.TAG_ORIENTATION))
@@ -143,7 +143,7 @@ class ReviewRegressionTest {
     @Test fun 반투명_배경색도_흰색_위에_합성해_투명이_검게_나오지_않는다() {
         val clear = Bitmap.createBitmap(20, 20, Bitmap.Config.ARGB_8888) // 전부 투명
         val png = TestImages.encode(clear, Bitmap.CompressFormat.PNG, 100)
-        val r = run { ImageCompressor { quality = 100; backgroundColor = 0x00FF0000 }.compress(png) }
+        val r = run { ImageCompressor { quality = 100; backgroundColor = 0x00FF0000 }.compressOrThrow(png) }
         val p = BitmapFactory.decodeByteArray(r.data, 0, r.data.size).getPixel(10, 10)
         assertTrue("픽셀 ${Integer.toHexString(p)}", Color.red(p) > 240 && Color.green(p) > 240 && Color.blue(p) > 240)
     }
@@ -162,7 +162,7 @@ class ReviewRegressionTest {
     @Test fun 파일_덮어쓰기는_임시_파일을_남기지_않는다() {
         val dir = tmp.newFolder("out")
         val target = File(dir, "a.jpg").apply { writeBytes(ByteArray(300_000) { 1 }) }
-        val r = run { ImageCompressor { maxDimension = 100 }.compress(jpeg) }
+        val r = run { ImageCompressor { maxDimension = 100 }.compressOrThrow(jpeg) }
         run { r.writeTo(target) }
         assertArrayEquals(r.data, target.readBytes())
         assertEquals(listOf("a.jpg"), dir.list()!!.toList())
@@ -171,7 +171,7 @@ class ReviewRegressionTest {
     @Test fun 파일_쓰기가_실패하면_기존_파일을_지우지_않는다() {
         val dir = tmp.newFolder("ro")
         val target = File(dir, "a.jpg").apply { writeBytes(byteArrayOf(1, 2, 3)) }
-        val r = run { ImageCompressor { maxDimension = 100 }.compress(jpeg) }
+        val r = run { ImageCompressor { maxDimension = 100 }.compressOrThrow(jpeg) }
         // 대상 자리에 디렉터리를 두면 바꿔치기가 실패한다 — 0.0.1 은 이 경우 대상을 지웠다
         val blocked = File(dir, "sub").apply { mkdirs(); File(this, "keep").writeBytes(byteArrayOf(9)) }
         assertThrows(ImageIoException::class.java) { run { r.writeTo(blocked) } }

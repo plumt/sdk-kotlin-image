@@ -57,13 +57,13 @@ class SourceSessionTest {
             override fun open() = ByteArrayInputStream(jpeg).also { opens++ }
         }
         assertTrue(source.openSession() is ReopeningSession)
-        runBlocking { ImageCompressor { maxDimension = 100 }.compress(source) }
+        runBlocking { ImageCompressor { maxDimension = 100 }.compressOrThrow(source) }
         assertEquals(3, opens) // 크기 · EXIF · 디코딩. 0.0.1 은 메타데이터 보존 시 4회
     }
 
     @Test fun 파일_입력도_한_번만_연다() {
         val f = tmp.newFile("in.jpg").apply { writeBytes(jpeg) }
-        val r = runBlocking { ImageCompressor { maxDimension = 100 }.compress(f) }
+        val r = runBlocking { ImageCompressor { maxDimension = 100 }.compressOrThrow(f) }
         assertEquals(100, r.width)
     }
 
@@ -72,7 +72,7 @@ class SourceSessionTest {
         FileBackedProvider.partialAsset = true
         assertTrue(ImageSource.uri(resolver, FileBackedProvider.uri).openSession() is ReopeningSession)
         FileBackedProvider.modes.clear()
-        val r = runBlocking { ImageCompressor { maxDimension = 100 }.compress(resolver, FileBackedProvider.uri) }
+        val r = runBlocking { ImageCompressor { maxDimension = 100 }.compressOrThrow(resolver, FileBackedProvider.uri) }
         assertEquals(100, r.width)
         assertEquals(4, FileBackedProvider.modes.size) // 기술자 시도 1 + 크기·EXIF·디코딩 3
     }
@@ -128,7 +128,7 @@ class SourceSessionTest {
     @Test fun 스트림_입력은_기본_조각_크기로_읽어도_압축된다() {
         val big = TestImages.noisyJpeg(900, 700)
         assertTrue(big.size > ChunkedBytes.CHUNK_SIZE)
-        val r = runBlocking { ImageCompressor { maxDimension = 300 }.compress(ByteArrayInputStream(big)) }
+        val r = runBlocking { ImageCompressor { maxDimension = 300 }.compressOrThrow(ByteArrayInputStream(big)) }
         assertEquals(300, r.width)
         assertNotNull(r.data)
     }

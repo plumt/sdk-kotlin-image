@@ -16,7 +16,7 @@ import org.robolectric.annotation.GraphicsMode
 class FuzzTest {
     private fun attempt(c: ImageCompressor, data: ByteArray) {
         try {
-            val r = runBlocking { c.compress(data) }
+            val r = runBlocking { c.compressOrThrow(data) }
             assertTrue(r.sizeInBytes > 0 && r.width > 0 && r.height > 0)
         } catch (e: ImageCompressionException) {
             // 허용: SDK 예외
@@ -46,7 +46,7 @@ class FuzzTest {
             val w = random.nextInt(1, 300)
             val h = random.nextInt(1, 300)
             val src = TestImages.noisyJpeg(w, h, seed = it)
-            val format = ImageFormat.values()[random.nextInt(ImageFormat.values().size)]
+            val format = ImageFormat.values[random.nextInt(ImageFormat.values.size)]
             val c = ImageCompressor {
                 this.format = format
                 maxWidth = random.nextInt(1, 400)
@@ -57,7 +57,7 @@ class FuzzTest {
                 if (random.nextInt(4) == 0) centerSquare(random.nextInt(1, 200), random.nextBoolean())
             }
             try {
-                val r = runBlocking { c.compress(src) }
+                val r = runBlocking { c.compressOrThrow(src) }
                 assertTrue("$w x $h -> ${r.width}x${r.height}", r.width.toLong() * r.height <= c.config.maxPixels)
                 (c.config.strategy as? TargetSizeStrategy)?.let { assertTrue(r.sizeInBytes <= it.targetBytes) }
             } catch (e: TargetSizeNotReachedException) {
@@ -69,7 +69,7 @@ class FuzzTest {
     @Test fun 극단_종횡비() {
         val c = ImageCompressor { maxDimension = 50 }
         for ((w, h) in listOf(1 to 1, 1 to 500, 500 to 1, 2 to 3)) {
-            val r = runBlocking { c.compress(TestImages.noisyJpeg(w, h)) }
+            val r = runBlocking { c.compressOrThrow(TestImages.noisyJpeg(w, h)) }
             assertTrue(r.width in 1..50 && r.height in 1..50)
         }
     }

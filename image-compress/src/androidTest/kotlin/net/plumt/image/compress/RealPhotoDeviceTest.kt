@@ -60,7 +60,7 @@ class RealPhotoDeviceTest {
         assertTrue("주입한 GPS 가 원본에 있어야 한다", before.latLong != null)
 
         val compressor = ImageCompressor(CompressionProfiles.Upload)
-        val (result, ms, peak) = measured { compressor.compress(file) }
+        val (result, ms, peak) = measured { compressor.compressOrThrow(file) }
         report("cam12.jpg(File) Upload", result, ms, peak)
 
         assertTrue(result.width <= 1920 && result.height <= 1920)
@@ -79,7 +79,7 @@ class RealPhotoDeviceTest {
             quality = 80
             targetBytes = 300_000
         }
-        val (result, ms, peak) = measured { compressor.compress(file) }
+        val (result, ms, peak) = measured { compressor.compressOrThrow(file) }
         report("cam12.jpg(File) WEBP 300KB", result, ms, peak)
         assertTrue(result.sizeInBytes <= 300_000)
         assertTrue(result.height > result.width)
@@ -115,7 +115,7 @@ class RealPhotoDeviceTest {
         val original = read("cam12.jpg")
         for (o in listOf(1, 3, 8, 6)) {
             val file = privateCopy("cam12.jpg", injectPrivate = false, orientation = o)
-            val result = ImageCompressor { maxDimension = 1024 }.compress(file)
+            val result = ImageCompressor { maxDimension = 1024 }.compressOrThrow(file)
             log("orientation=$o → ${result.width}x${result.height}")
             if (o in 5..8) assertTrue(result.height > result.width) else assertTrue(result.width > result.height)
             assertOrientationMatches(original, o, result.data)
@@ -131,20 +131,20 @@ class RealPhotoDeviceTest {
         val before = ExifInterface(file.path)
         log("heic 원본 Model 존재=${before.getAttribute(ExifInterface.TAG_MODEL) != null}, orientation=${before.getAttributeInt(ExifInterface.TAG_ORIENTATION, 0)}")
         val compressor = ImageCompressor(CompressionProfiles.Upload)
-        val (result, ms, peak) = measured { compressor.compress(file) }
+        val (result, ms, peak) = measured { compressor.compressOrThrow(file) }
         report("cam12.heic(File) Upload", result, ms, peak)
         assertTrue("HEIC 는 세로(3000x4000) 픽셀", result.height > result.width)
         assertTrue(result.width <= 1920 && result.height <= 1920)
         assertNoPrivateMetadata(result.data, "heic")
 
         // JPEG 경로(EXIF 6 적용) 결과와 픽셀이 같은 방향인지
-        val jpegResult = compressor.compress(privateCopy("cam12.jpg", injectPrivate = false))
+        val jpegResult = compressor.compressOrThrow(privateCopy("cam12.jpg", injectPrivate = false))
         val d = thumbDiff(decode(result.data), decode(jpegResult.data))
         log("heic vs jpeg 썸네일 차이=$d")
         assertTrue("HEIC 결과가 JPEG 결과와 같은 방향이어야 한다(diff=$d)", d < 25.0)
 
         val uri = mediaStoreCopy("cam12.heic", injectPrivate = false, mime = "image/heic")
-        val (r2, ms2, peak2) = measured { compressor.compress(resolver, uri) }
+        val (r2, ms2, peak2) = measured { compressor.compressOrThrow(resolver, uri) }
         report("cam12.heic(content Uri) Upload", r2, ms2, peak2)
         assertEquals(result.width, r2.width)
         assertEquals(3000, r2.sourceWidth)
@@ -168,7 +168,7 @@ class RealPhotoDeviceTest {
         // 스트림 경로(사용자 소스·바이트 입력)에서도 ExifInterface 가 같은 방향을 준다
         val viaStream = ExifInterface(ByteArrayInputStream(file.readBytes())).getAttributeInt(ExifInterface.TAG_ORIENTATION, 0)
         assertEquals(orientation, viaStream)
-        val r = runBlocking { ImageCompressor { maxDimension = 1024 }.compress(file.readBytes()) }
+        val r = runBlocking { ImageCompressor { maxDimension = 1024 }.compressOrThrow(file.readBytes()) }
         assertTrue("바이트 입력도 세로: ${r.width}x${r.height}", r.height > r.width)
         assertTrue(r.warnings.isEmpty())
     }
@@ -180,7 +180,7 @@ class RealPhotoDeviceTest {
         val file = privateCopy("cam12.jpg", injectPrivate = true)
         val result = ImageCompressor(CompressionProfiles.Upload) {
             preserveMetadata = setOf(MetadataGroup.CAMERA)
-        }.compress(file)
+        }.compressOrThrow(file)
         report("cam12.jpg preserve=CAMERA", result, 0, 0)
         val exif = exifOf(result.data)
         assertEquals(ExifInterface(file.path).getAttribute(ExifInterface.TAG_MODEL), exif.getAttribute(ExifInterface.TAG_MODEL))
@@ -205,14 +205,14 @@ class RealPhotoDeviceTest {
         val upload = ImageCompressor(CompressionProfiles.Upload)
         val baseline = Debug.getNativeHeapAllocatedSize()
         repeat(3) { i ->
-            val (r, ms, peak) = measured { upload.compress(file) }
+            val (r, ms, peak) = measured { upload.compressOrThrow(file) }
             report("big108.jpg Upload #${i + 1}", r, ms, peak)
             assertTrue(r.height > r.width)
             assertTrue(r.sizeInBytes <= 1536 * 1024)
         }
         // 최대 해상도 요청 — maxPixels(16.7M) 가 막아야 한다
         val maxRes = ImageCompressor { maxDimension = 12000; format = ImageFormat.JPEG; quality = 85 }
-        val (r, ms, peak) = measured { maxRes.compress(file) }
+        val (r, ms, peak) = measured { maxRes.compressOrThrow(file) }
         report("big108.jpg maxDimension=12000", r, ms, peak)
         assertTrue("maxPixels 이하: ${r.width}x${r.height}", r.width.toLong() * r.height <= (4096L * 4096L))
         System.gc(); Runtime.getRuntime().gc(); Thread.sleep(300)
@@ -226,7 +226,7 @@ class RealPhotoDeviceTest {
         assumeTrue(exists("big108.jpg"))
         val file = privateCopy("big108.jpg", injectPrivate = false)
         val c = ImageCompressor { maxDimension = 12000; targetBytes = 50_000 }
-        val job = async { c.compress(file) }
+        val job = async { c.compressOrThrow(file) }
         delay(150)
         job.cancel()
         try {
@@ -242,10 +242,10 @@ class RealPhotoDeviceTest {
     @Test
     fun thumbnailAndAvatar() = runBlocking {
         val file = privateCopy("cam12.jpg", injectPrivate = true)
-        val t = measured { ImageCompressor(CompressionProfiles.Thumbnail).compress(file) }
+        val t = measured { ImageCompressor(CompressionProfiles.Thumbnail).compressOrThrow(file) }
         report("cam12.jpg Thumbnail", t.first, t.second, t.third)
         assertTrue(t.first.width <= 512 && t.first.height <= 512 && t.first.sizeInBytes <= 100 * 1024)
-        val a = measured { ImageCompressor(CompressionProfiles.Avatar).compress(file) }
+        val a = measured { ImageCompressor(CompressionProfiles.Avatar).compressOrThrow(file) }
         report("cam12.jpg Avatar", a.first, a.second, a.third)
         assertEquals(256, a.first.width)
         assertEquals(256, a.first.height)

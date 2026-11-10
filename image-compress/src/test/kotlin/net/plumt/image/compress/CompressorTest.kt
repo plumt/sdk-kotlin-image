@@ -53,7 +53,7 @@ class CompressorTest {
     private val jpeg = TestImages.noisyJpeg(800, 600)
 
     @Test fun 바이트_입력은_최대_크기_안으로_줄이고_보고한다() {
-        val r = run { ImageCompressor { maxDimension = 400 }.compress(jpeg) }
+        val r = run { ImageCompressor { maxDimension = 400 }.compressOrThrow(jpeg) }
         assertEquals(400, r.width)
         assertEquals(300, r.height)
         assertEquals(800, r.sourceWidth)
@@ -69,20 +69,20 @@ class CompressorTest {
     }
 
     @Test fun 축소_디코딩_배수를_보고한다() {
-        val r = run { ImageCompressor { maxDimension = 200 }.compress(jpeg) }
+        val r = run { ImageCompressor { maxDimension = 200 }.compressOrThrow(jpeg) }
         assertEquals(4, r.sampleSize) // 800/4 = 200
         assertEquals(200, r.width)
     }
 
     @Test fun 파일_입력() {
         val f = tmp.newFile("a.jpg").apply { writeBytes(jpeg) }
-        val r = run { ImageCompressor { maxDimension = 400 }.compress(f) }
+        val r = run { ImageCompressor { maxDimension = 400 }.compressOrThrow(f) }
         assertEquals(400, r.width)
     }
 
     @Test fun 없는_파일은_ImageIoException() {
         val e = assertThrows(ImageIoException::class.java) {
-            run { ImageCompressor().compress(File(tmp.root, "none.jpg")) }
+            run { ImageCompressor().compressOrThrow(File(tmp.root, "none.jpg")) }
         }
         assertTrue(e.cause is IOException)
     }
@@ -95,7 +95,7 @@ class CompressorTest {
                 super.close()
             }
         }
-        val r = run { ImageCompressor { maxDimension = 400 }.compress(input) }
+        val r = run { ImageCompressor { maxDimension = 400 }.compressOrThrow(input) }
         assertEquals(400, r.width)
         assertTrue(closed)
     }
@@ -106,7 +106,7 @@ class CompressorTest {
             assertThrows(IOException::class.java) { src.open() }
         }
         assertThrows(ImageIoException::class.java) {
-            run { ImageCompressor().compress(ImageSource.stream(ByteArrayInputStream(jpeg), 100)) }
+            run { ImageCompressor().compressOrThrow(ImageSource.stream(ByteArrayInputStream(jpeg), 100)) }
         }
     }
 
@@ -126,21 +126,21 @@ class CompressorTest {
         val broken = object : InputStream() {
             override fun read(): Int = throw IOException("boom")
         }
-        val e = assertThrows(ImageIoException::class.java) { run { ImageCompressor().compress(broken) } }
+        val e = assertThrows(ImageIoException::class.java) { run { ImageCompressor().compressOrThrow(broken) } }
         assertEquals("boom", e.cause!!.message)
     }
 
     @Test fun URI_입력_file_스킴() {
         val f = tmp.newFile("b.jpg").apply { writeBytes(jpeg) }
         val resolver = RuntimeEnvironment.getApplication().contentResolver
-        val r = run { ImageCompressor { maxDimension = 400 }.compress(resolver, Uri.fromFile(f)) }
+        val r = run { ImageCompressor { maxDimension = 400 }.compressOrThrow(resolver, Uri.fromFile(f)) }
         assertEquals(400, r.width)
     }
 
     @Test fun URI_를_못_열면_ImageIoException() {
         val resolver = RuntimeEnvironment.getApplication().contentResolver
         assertThrows(ImageIoException::class.java) {
-            run { ImageCompressor().compress(resolver, Uri.fromFile(File(tmp.root, "none"))) }
+            run { ImageCompressor().compressOrThrow(resolver, Uri.fromFile(File(tmp.root, "none"))) }
         }
     }
 
@@ -160,19 +160,19 @@ class CompressorTest {
 
     @Test fun 쓸수_없는_URI_는_ImageIoException() {
         val resolver = RuntimeEnvironment.getApplication().contentResolver
-        val r = run { ImageCompressor { maxDimension = 100 }.compress(jpeg) }
+        val r = run { ImageCompressor { maxDimension = 100 }.compressOrThrow(jpeg) }
         assertThrows(ImageIoException::class.java) {
             run { r.writeTo(resolver, Uri.parse("content://no.such.authority/x")) }
         }
     }
 
     @Test fun 디렉터리에는_파일을_쓸수_없다() {
-        val r = run { ImageCompressor { maxDimension = 100 }.compress(jpeg) }
+        val r = run { ImageCompressor { maxDimension = 100 }.compressOrThrow(jpeg) }
         assertThrows(ImageIoException::class.java) { run { r.writeTo(tmp.newFolder("dir")) } }
     }
 
     @Test fun 출력_스트림_실패는_ImageIoException() {
-        val r = run { ImageCompressor { maxDimension = 100 }.compress(jpeg) }
+        val r = run { ImageCompressor { maxDimension = 100 }.compressOrThrow(jpeg) }
         val bad = object : OutputStream() {
             override fun write(b: Int) = throw IOException("disk")
         }
@@ -181,7 +181,7 @@ class CompressorTest {
     }
 
     @Test fun 출력_스트림에_쓴다() {
-        val r = run { ImageCompressor { maxDimension = 100 }.compress(jpeg) }
+        val r = run { ImageCompressor { maxDimension = 100 }.compressOrThrow(jpeg) }
         val o = ByteArrayOutputStream()
         r.writeTo(o)
         assertArrayEquals(r.data, o.toByteArray())
@@ -189,7 +189,7 @@ class CompressorTest {
 
     // ---------- 형식 ----------
     @Test fun 형식별_출력_시그니처() {
-        fun sig(f: ImageFormat) = run { ImageCompressor { format = f; maxDimension = 100 }.compress(jpeg) }.data
+        fun sig(f: ImageFormat) = run { ImageCompressor { format = f; maxDimension = 100 }.compressOrThrow(jpeg) }.data
         val j = sig(ImageFormat.JPEG)
         assertEquals(0xFF.toByte(), j[0]); assertEquals(0xD8.toByte(), j[1])
         val p = sig(ImageFormat.PNG)
@@ -202,22 +202,22 @@ class CompressorTest {
     }
 
     @Test fun 품질_없는_형식은_quality_가_null() {
-        val png = run { ImageCompressor { format = ImageFormat.PNG; maxDimension = 100 }.compress(jpeg) }
+        val png = run { ImageCompressor { format = ImageFormat.PNG; maxDimension = 100 }.compressOrThrow(jpeg) }
         assertNull(png.quality)
-        val ll = run { ImageCompressor { format = ImageFormat.WEBP_LOSSLESS; maxDimension = 100 }.compress(jpeg) }
+        val ll = run { ImageCompressor { format = ImageFormat.WEBP_LOSSLESS; maxDimension = 100 }.compressOrThrow(jpeg) }
         assertNull(ll.quality)
     }
 
     @Test fun 품질이_낮을수록_작다() {
-        val hi = run { ImageCompressor { quality = 95; maxDimension = 400 }.compress(jpeg) }
-        val lo = run { ImageCompressor { quality = 20; maxDimension = 400 }.compress(jpeg) }
+        val hi = run { ImageCompressor { quality = 95; maxDimension = 400 }.compressOrThrow(jpeg) }
+        val lo = run { ImageCompressor { quality = 20; maxDimension = 400 }.compressOrThrow(jpeg) }
         assertTrue(lo.sizeInBytes < hi.sizeInBytes)
     }
 
     @Test fun PNG_입력도_읽는다() {
         val b = TestImages.noisyBitmap(300, 200)
         val png = TestImages.encode(b, Bitmap.CompressFormat.PNG, 100)
-        val r = run { ImageCompressor { format = ImageFormat.PNG; maxDimension = 100 }.compress(png) }
+        val r = run { ImageCompressor { format = ImageFormat.PNG; maxDimension = 100 }.compressOrThrow(png) }
         assertEquals(100, r.width)
         assertEquals(67, r.height)
     }
@@ -225,10 +225,10 @@ class CompressorTest {
     @Test fun 투명_픽셀은_JPEG_에서_배경색_위에_합성된다() {
         val b = Bitmap.createBitmap(20, 20, Bitmap.Config.ARGB_8888) // 전부 투명
         val png = TestImages.encode(b, Bitmap.CompressFormat.PNG, 100)
-        val white = run { ImageCompressor { format = ImageFormat.JPEG; quality = 100 }.compress(png) }
+        val white = run { ImageCompressor { format = ImageFormat.JPEG; quality = 100 }.compressOrThrow(png) }
         val wb = BitmapFactory.decodeByteArray(white.data, 0, white.data.size)
         assertTrue(Color.red(wb.getPixel(10, 10)) > 240 && Color.green(wb.getPixel(10, 10)) > 240)
-        val red = run { ImageCompressor { format = ImageFormat.JPEG; quality = 100; backgroundColor = Color.RED }.compress(png) }
+        val red = run { ImageCompressor { format = ImageFormat.JPEG; quality = 100; backgroundColor = Color.RED }.compressOrThrow(png) }
         val rb = BitmapFactory.decodeByteArray(red.data, 0, red.data.size)
         assertTrue(Color.red(rb.getPixel(10, 10)) > 200 && Color.green(rb.getPixel(10, 10)) < 60)
     }
@@ -236,7 +236,7 @@ class CompressorTest {
     @Test fun PNG_는_투명을_유지한다() {
         val b = Bitmap.createBitmap(20, 20, Bitmap.Config.ARGB_8888)
         val png = TestImages.encode(b, Bitmap.CompressFormat.PNG, 100)
-        val r = run { ImageCompressor { format = ImageFormat.PNG }.compress(png) }
+        val r = run { ImageCompressor { format = ImageFormat.PNG }.compressOrThrow(png) }
         val d = BitmapFactory.decodeByteArray(r.data, 0, r.data.size)
         assertEquals(0, Color.alpha(d.getPixel(5, 5)))
     }
@@ -244,14 +244,14 @@ class CompressorTest {
     // ---------- 크기·픽셀 ----------
     @Test fun 작은_이미지는_확대하지_않지만_다시_인코딩한다() {
         val small = TestImages.noisyJpeg(50, 40)
-        val r = run { ImageCompressor().compress(small) }
+        val r = run { ImageCompressor().compressOrThrow(small) }
         assertEquals(50, r.width)
         assertEquals(1, r.sampleSize)
         assertNotEquals(small.toList(), r.data.toList())
     }
 
     @Test fun maxPixels_가_출력_픽셀_수를_제한한다() {
-        val r = run { ImageCompressor { maxDimension = 10_000; maxPixels = 10_000 }.compress(jpeg) }
+        val r = run { ImageCompressor { maxDimension = 10_000; maxPixels = 10_000 }.compressOrThrow(jpeg) }
         assertTrue(r.width.toLong() * r.height <= 10_000)
         assertTrue(r.width > 50)
         // 종횡비 유지(4:3)
@@ -259,7 +259,7 @@ class CompressorTest {
     }
 
     @Test fun 정사각_자르기() {
-        val r = run { ImageCompressor { centerSquare(100) }.compress(jpeg) }
+        val r = run { ImageCompressor { centerSquare(100) }.compressOrThrow(jpeg) }
         assertEquals(100, r.width)
         assertEquals(100, r.height)
     }
@@ -269,7 +269,7 @@ class CompressorTest {
         val b = Bitmap.createBitmap(300, 100, Bitmap.Config.ARGB_8888)
         for (x in 0 until 300) for (y in 0 until 100) b.setPixel(x, y, if (x in 100 until 200) TestImages.RED else TestImages.BLUE)
         val png = TestImages.encode(b, Bitmap.CompressFormat.PNG, 100)
-        val r = run { ImageCompressor { centerSquare(50); format = ImageFormat.PNG }.compress(png) }
+        val r = run { ImageCompressor { centerSquare(50); format = ImageFormat.PNG }.compressOrThrow(png) }
         val d = BitmapFactory.decodeByteArray(r.data, 0, r.data.size)
         assertEquals(50, d.width)
         assertEquals(TestImages.RED, d.getPixel(0, 0))
@@ -278,14 +278,14 @@ class CompressorTest {
 
     @Test fun 사용자_Resizer_가_원본_밖을_가리키면_IAE() {
         val c = ImageCompressor { resizer = Resizer { w, h -> ResizePlan(0, 0, w + 1, h, 10, 10) } }
-        val e = assertThrows(IllegalArgumentException::class.java) { run { c.compress(jpeg) } }
+        val e = assertThrows(IllegalArgumentException::class.java) { run { c.compressOrThrow(jpeg) } }
         assertTrue(e.message!!.contains("800x600"))
     }
 
     // ---------- 방향 ----------
     @Test fun EXIF_방향_6_은_폭_높이를_바꾼다() {
         val rotated = TestImages.withExif(jpeg) { setAttribute(ExifInterface.TAG_ORIENTATION, "6") }
-        val r = run { ImageCompressor { maxDimension = 400 }.compress(rotated) }
+        val r = run { ImageCompressor { maxDimension = 400 }.compressOrThrow(rotated) }
         assertEquals(600, r.sourceWidth)
         assertEquals(800, r.sourceHeight)
         assertEquals(300, r.width)
@@ -298,7 +298,7 @@ class CompressorTest {
         val src = Bitmap.createBitmap(60, 40, Bitmap.Config.ARGB_8888)
         for (x in 0 until 60) for (y in 0 until 40) src.setPixel(x, y, if (x < 16 && y < 16) TestImages.RED else TestImages.BLUE)
         val j = TestImages.withExif(TestImages.encode(src, Bitmap.CompressFormat.JPEG, 100)) { setAttribute(ExifInterface.TAG_ORIENTATION, "6") }
-        val r = run { ImageCompressor { quality = 100; maxDimension = 1000 }.compress(j) }
+        val r = run { ImageCompressor { quality = 100; maxDimension = 1000 }.compressOrThrow(j) }
         val d = BitmapFactory.decodeByteArray(r.data, 0, r.data.size)
         assertEquals(40, d.width)
         assertEquals(60, d.height)
@@ -310,18 +310,18 @@ class CompressorTest {
 
     // ---------- 오류 ----------
     @Test fun 쓰레기_바이트는_ImageDecodeException() {
-        val e = assertThrows(ImageDecodeException::class.java) { run { ImageCompressor().compress(ByteArray(64) { 1 }) } }
+        val e = assertThrows(ImageDecodeException::class.java) { run { ImageCompressor().compressOrThrow(ByteArray(64) { 1 }) } }
         assertTrue(e.message!!.contains("크기를 읽을 수 없다"))
     }
 
     @Test fun 빈_바이트는_ImageDecodeException() {
-        assertThrows(ImageDecodeException::class.java) { run { ImageCompressor().compress(ByteArray(0)) } }
+        assertThrows(ImageDecodeException::class.java) { run { ImageCompressor().compressOrThrow(ByteArray(0)) } }
     }
 
     @Test fun 잘린_JPEG_는_예외_또는_결과이고_크래시가_아니다() {
         val cut = jpeg.copyOf(jpeg.size / 3)
         try {
-            run { ImageCompressor { maxDimension = 100 }.compress(cut) }
+            run { ImageCompressor { maxDimension = 100 }.compressOrThrow(cut) }
         } catch (e: ImageCompressionException) {
             // 허용되는 실패 형태
         }
@@ -329,42 +329,42 @@ class CompressorTest {
 
     @Test fun 인코더가_false_를_내면_ImageEncodeException() {
         val c = ImageCompressor { encoder = Encoder { _, _, _ -> throw ImageEncodeException("x") } }
-        assertThrows(ImageEncodeException::class.java) { run { c.compress(jpeg) } }
+        assertThrows(ImageEncodeException::class.java) { run { c.compressOrThrow(jpeg) } }
     }
 
     @Test fun 인코더가_빈_배열을_내면_ImageEncodeException() {
         val c = ImageCompressor { encoder = Encoder { _, _, _ -> ByteArray(0) } }
-        val e = assertThrows(ImageEncodeException::class.java) { run { c.compress(jpeg) } }
+        val e = assertThrows(ImageEncodeException::class.java) { run { c.compressOrThrow(jpeg) } }
         assertTrue(e.message!!.contains("빈 결과"))
     }
 
     @Test fun 인코더의_런타임_예외는_cause_를_보존해_감싼다() {
         val boom = IllegalStateException("native")
         val c = ImageCompressor { encoder = Encoder { _, _, _ -> throw boom } }
-        val e = assertThrows(ImageEncodeException::class.java) { run { c.compress(jpeg) } }
+        val e = assertThrows(ImageEncodeException::class.java) { run { c.compressOrThrow(jpeg) } }
         assertSame(boom, e.cause)
     }
 
     @Test fun 인코더의_IOException_은_ImageEncodeException() {
         val boom = IOException("io")
         val c = ImageCompressor { encoder = Encoder { _, _, _ -> throw boom } }
-        assertSame(boom, assertThrows(ImageEncodeException::class.java) { run { c.compress(jpeg) } }.cause)
+        assertSame(boom, assertThrows(ImageEncodeException::class.java) { run { c.compressOrThrow(jpeg) } }.cause)
     }
 
     @Test fun 인코더의_IAE_는_그대로_전달된다() {
         val c = ImageCompressor { encoder = Encoder { _, _, _ -> throw IllegalArgumentException("bad") } }
-        assertEquals("bad", assertThrows(IllegalArgumentException::class.java) { run { c.compress(jpeg) } }.message)
+        assertEquals("bad", assertThrows(IllegalArgumentException::class.java) { run { c.compressOrThrow(jpeg) } }.message)
     }
 
     @Test fun 인코더의_OOM_은_ImageOutOfMemoryException() {
         val oom = OutOfMemoryError("x")
         val c = ImageCompressor { encoder = Encoder { _, _, _ -> throw oom } }
-        assertSame(oom, assertThrows(ImageOutOfMemoryException::class.java) { run { c.compress(jpeg) } }.cause)
+        assertSame(oom, assertThrows(ImageOutOfMemoryException::class.java) { run { c.compressOrThrow(jpeg) } }.cause)
     }
 
     @Test fun 용량_목표_불가능은_TargetSizeNotReachedException() {
         val e = assertThrows(TargetSizeNotReachedException::class.java) {
-            run { ImageCompressor { targetBytes = 10; minDimension = 16 }.compress(jpeg) }
+            run { ImageCompressor { targetBytes = 10; minDimension = 16 }.compressOrThrow(jpeg) }
         }
         assertEquals(10L, e.targetBytes)
         assertTrue(e.smallestBytes > 10)
@@ -387,9 +387,9 @@ class CompressorTest {
 
     // ---------- 용량 목표 (실제 인코딩) ----------
     @Test fun 실제_인코딩으로_용량_목표를_맞춘다() {
-        val base = run { ImageCompressor { quality = 95; maxDimension = 800 }.compress(jpeg) }
+        val base = run { ImageCompressor { quality = 95; maxDimension = 800 }.compressOrThrow(jpeg) }
         val target = base.sizeInBytes / 3L
-        val r = run { ImageCompressor { quality = 95; maxDimension = 800; targetBytes = target }.compress(jpeg) }
+        val r = run { ImageCompressor { quality = 95; maxDimension = 800; targetBytes = target }.compressOrThrow(jpeg) }
         assertTrue("${r.sizeInBytes} <= $target", r.sizeInBytes <= target)
         assertTrue(r.attempts > 1)
         assertTrue(r.quality!! < 95)
@@ -397,8 +397,8 @@ class CompressorTest {
 
     @Test fun 같은_입력_같은_설정은_같은_결과() {
         val c = ImageCompressor { targetBytes = 30_000; maxDimension = 800 }
-        val a = run { c.compress(jpeg) }
-        val b = run { c.compress(jpeg) }
+        val a = run { c.compressOrThrow(jpeg) }
+        val b = run { c.compressOrThrow(jpeg) }
         assertEquals(a, b)
         assertEquals(a.hashCode(), b.hashCode())
         assertEquals(a.quality, b.quality)
@@ -406,7 +406,7 @@ class CompressorTest {
     }
 
     @Test fun 결과_toString_은_바이트를_싣지_않는다() {
-        val r = run { ImageCompressor { maxDimension = 100 }.compress(jpeg) }
+        val r = run { ImageCompressor { maxDimension = 100 }.compressOrThrow(jpeg) }
         assertTrue(r.toString().startsWith("CompressedImage(JPEG 100x75"))
         assertFalse(r.toString().contains("[B@"))
         assertNotEquals(r, "x")
@@ -418,13 +418,13 @@ class CompressorTest {
             seen.add(ctx.bitmap.width)
             EncodedImage(ctx.encode(ctx.bitmap, 10), ctx.bitmap.width, ctx.bitmap.height, 10, 1)
         }
-        val r = run { ImageCompressor { this.strategy = strategy; maxDimension = 100 }.compress(jpeg) }
+        val r = run { ImageCompressor { this.strategy = strategy; maxDimension = 100 }.compressOrThrow(jpeg) }
         assertEquals(listOf(100), seen)
         assertEquals(10, r.quality)
     }
 
     @Test fun SinglePass_는_용량을_보장하지_않는다() {
-        val r = run { ImageCompressor { quality = 100; maxDimension = 800 }.compress(jpeg) }
+        val r = run { ImageCompressor { quality = 100; maxDimension = 800 }.compressOrThrow(jpeg) }
         assertEquals(1, r.attempts)
     }
 
@@ -440,7 +440,7 @@ class CompressorTest {
             }
             // 매 시도마다 용량을 못 맞춰 여러 번 인코딩하게 한다
             val c = ImageCompressor { encoder = enc; targetBytes = 1; minDimension = 8; dispatcher = Dispatchers.Default }
-            val job = launch(Dispatchers.Default) { c.compress(jpeg) }
+            val job = launch(Dispatchers.Default) { c.compressOrThrow(jpeg) }
             started.await()
             job.cancel()
             proceed.complete(Unit)
@@ -459,7 +459,7 @@ class CompressorTest {
                 Encoder.Default.encode(b, f, q)
             }
             val c = ImageCompressor { encoder = enc; targetBytes = 1; minDimension = 8; dispatcher = Dispatchers.Default }
-            job = launch(Dispatchers.Default) { c.compress(jpeg) }
+            job = launch(Dispatchers.Default) { c.compressOrThrow(jpeg) }
             job.join()
             assertTrue(job.isCancelled)
         }
@@ -469,7 +469,7 @@ class CompressorTest {
     @Test fun 시작_전에_취소되면_CancellationException_이고_SDK_예외로_감싸지_않는다() {
         val e = assertThrows(CancellationException::class.java) {
             runBlocking {
-                val d = async(Dispatchers.Default, start = kotlinx.coroutines.CoroutineStart.LAZY) { ImageCompressor().compress(jpeg) }
+                val d = async(Dispatchers.Default, start = kotlinx.coroutines.CoroutineStart.LAZY) { ImageCompressor().compressOrThrow(jpeg) }
                 d.cancelAndJoin()
                 d.await()
             }
@@ -479,7 +479,7 @@ class CompressorTest {
 
     @Test fun 동시에_여러_번_불러도_결과가_같다() {
         val c = ImageCompressor { maxDimension = 200; targetBytes = 20_000; dispatcher = Dispatchers.Default }
-        val results = runBlocking { (1..8).map { async { c.compress(jpeg) } }.awaitAll() }
+        val results = runBlocking { (1..8).map { async { c.compressOrThrow(jpeg) } }.awaitAll() }
         assertEquals(1, results.toSet().size)
     }
 
@@ -489,7 +489,7 @@ class CompressorTest {
         try {
             val d = ex.asCoroutineDispatcher()
             val c = ImageCompressor { dispatcher = d; encoder = Encoder { b, f, q -> thread = Thread.currentThread().name; Encoder.Default.encode(b, f, q) } }
-            run { c.compress(jpeg) }
+            run { c.compressOrThrow(jpeg) }
         } finally {
             ex.shutdown()
         }
@@ -501,14 +501,14 @@ class CompressorTest {
         val c = ImageCompressor {
             encoder = Encoder { b, _, _ -> bitmaps.add(b); throw ImageEncodeException("x") }
         }
-        assertThrows(ImageEncodeException::class.java) { run { c.compress(jpeg) } }
+        assertThrows(ImageEncodeException::class.java) { run { c.compressOrThrow(jpeg) } }
         assertTrue(bitmaps.isNotEmpty() && bitmaps.all { it.isRecycled })
     }
 
     @Test fun 성공_뒤에도_중간_비트맵이_회수된다() {
         val bitmaps = ArrayList<Bitmap>()
         val c = ImageCompressor { maxDimension = 200; encoder = Encoder { b, f, q -> bitmaps.add(b); Encoder.Default.encode(b, f, q) } }
-        run { c.compress(jpeg) }
+        run { c.compressOrThrow(jpeg) }
         assertTrue(bitmaps.all { it.isRecycled })
     }
 
@@ -516,17 +516,17 @@ class CompressorTest {
         val big = TestImages.noisyJpeg(4000, 3000)
         val dims = ArrayList<Int>()
         val c = ImageCompressor { maxDimension = 500; encoder = Encoder { b, f, q -> dims.add(b.width * b.height); Encoder.Default.encode(b, f, q) } }
-        val r = run { c.compress(big) }
+        val r = run { c.compressOrThrow(big) }
         assertEquals(8, r.sampleSize)
         assertEquals(500 * 375, dims.single())
     }
 
     @Test fun 프로필() {
-        val up = run { ImageCompressor(CompressionProfiles.Upload).compress(jpeg) }
+        val up = run { ImageCompressor(CompressionProfiles.Upload).compressOrThrow(jpeg) }
         assertTrue(up.sizeInBytes <= 1536 * 1024)
-        val th = run { ImageCompressor(CompressionProfiles.Thumbnail) { maxDimension = 100 }.compress(jpeg) }
+        val th = run { ImageCompressor(CompressionProfiles.Thumbnail) { maxDimension = 100 }.compressOrThrow(jpeg) }
         assertEquals(100, th.width)
-        val av = run { ImageCompressor(CompressionProfiles.Avatar).compress(jpeg) }
+        val av = run { ImageCompressor(CompressionProfiles.Avatar).compressOrThrow(jpeg) }
         assertEquals(256, av.width); assertEquals(256, av.height)
         assertEquals("avatar", CompressionProfiles.Avatar.name)
         assertEquals("CompressionProfile(avatar)", CompressionProfiles.Avatar.toString())
@@ -534,8 +534,8 @@ class CompressorTest {
     }
 
     @Test fun 사용자_정의_프로필() {
-        val banner = CompressionProfile("banner") { maxWidth = 300; maxHeight = 100; format = ImageFormat.WEBP }
-        val r = run { ImageCompressor(banner).compress(jpeg) }
+        val banner = CompressionProfile("banner") { maxWidth(300).maxHeight(100).format(ImageFormat.WEBP) }
+        val r = run { ImageCompressor(banner).compressOrThrow(jpeg) }
         assertTrue(r.width <= 300 && r.height <= 100)
         assertEquals(ImageFormat.WEBP, r.format)
     }

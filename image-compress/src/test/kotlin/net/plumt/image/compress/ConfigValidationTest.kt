@@ -82,8 +82,8 @@ class ConfigValidationTest {
     }
 
     @Test fun 형식_속성() {
-        assertEquals(listOf("jpg", "png", "webp", "webp"), ImageFormat.values().map { it.extension })
-        assertEquals(listOf(true, false, true, false), ImageFormat.values().map { it.supportsQuality })
+        assertEquals(listOf("jpg", "png", "webp", "webp"), ImageFormat.values.map { it.extension })
+        assertEquals(listOf(true, false, true, false), ImageFormat.values.map { it.supportsQuality })
         assertEquals("image/webp", ImageFormat.WEBP_LOSSLESS.mimeType)
     }
 
@@ -101,7 +101,7 @@ class ConfigValidationTest {
 }
 
 class ResultEqualityTest {
-    private fun r(data: ByteArray, q: Int? = 80) = CompressedImage(data, ImageFormat.JPEG, 1, 1, q, 2, 2, 1, 1, emptySet())
+    private fun r(data: ByteArray, q: Int? = 80) = CompressedImage(data, ImageFormat.JPEG, 1, 1, q, 2, 2, 1, 1, emptySet(), emptySet())
 
     @Test fun 같음과_해시() {
         val a = r(byteArrayOf(1, 2))

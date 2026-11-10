@@ -23,29 +23,33 @@ public interface ImageSource {
     @Throws(IOException::class)
     public fun open(): InputStream
 
+    /** 기본 제공 출처. */
     public companion object {
         /** 메모리의 바이트 배열. 복사하지 않고 그대로 읽는다. */
         public fun bytes(data: ByteArray): ImageSource = object : ImageSource {
             override fun open(): InputStream = ByteArrayInputStream(data)
         }
 
-        /** 파일. 없으면 [ImageIoException] 으로 알려진다. */
+        /** 파일. 없으면 [ImageIoException] 실패로 알려진다. */
         public fun file(file: File): ImageSource = FileImageSource(file)
 
         /**
          * `content://`·`file://` URI. [resolver] 는 `context.contentResolver` 를 넘긴다.
-         * 읽기 권한이 없거나 만료됐으면(`SecurityException`) [ImageIoException] 이다.
+         * 읽기 권한이 없거나 만료됐으면(`SecurityException`) [ImageIoException] 실패다.
          */
         public fun uri(resolver: ContentResolver, uri: Uri): ImageSource = UriImageSource(resolver, uri)
 
+        /** 한 번만 읽히는 스트림을 기본 한도([DEFAULT_MAX_STREAM_BYTES], 64MiB)로 읽는다. 자세한 동작은 [stream] (maxBytes). */
+        public fun stream(input: InputStream): ImageSource = stream(input, DEFAULT_MAX_STREAM_BYTES)
+
         /**
          * 한 번만 읽히는 스트림. 여러 번 열어야 하므로 **전부 메모리로 읽어 들인 뒤** [input] 을 닫는다.
-         * 읽는 도중 [maxBytes] 를 넘으면 [ImageIoException] 이다(기본 64MiB) — 끝없는 스트림으로 메모리를 소진당하지 않는다.
+         * 읽는 도중 [maxBytes] 를 넘으면 [ImageIoException] 실패다 — 끝없는 스트림으로 메모리를 소진당하지 않는다.
          * 메모리는 읽은 크기만큼(64KiB 단위로 반올림) 쓰며 배열을 키우며 복사하지 않는다.
          *
          * @throws IllegalArgumentException [maxBytes] 가 0 이하일 때
          */
-        public fun stream(input: InputStream, maxBytes: Long = DEFAULT_MAX_STREAM_BYTES): ImageSource {
+        public fun stream(input: InputStream, maxBytes: Long): ImageSource {
             require(maxBytes > 0) { "maxBytes 는 1 이상이어야 한다: $maxBytes" }
             return BufferedStreamSource(input, maxBytes)
         }

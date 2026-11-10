@@ -118,7 +118,7 @@ class PipelineSeamTest {
 
     @Test fun 실제_손상_EXIF_는_경고로_표시된다() {
         val broken = TestImages.corruptExifJpeg()
-        val result = kotlinx.coroutines.runBlocking { ImageCompressor().compress(broken) }
+        val result = kotlinx.coroutines.runBlocking { ImageCompressor().compressOrThrow(broken) }
         assertEquals(setOf(CompressionWarning.EXIF_UNREADABLE), result.warnings)
     }
 

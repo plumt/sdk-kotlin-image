@@ -12,9 +12,11 @@ import kotlin.math.sqrt
  * 기본 제공: [SinglePassStrategy], [TargetSizeStrategy]. 직접 구현해 예컨대 "SSIM 목표" 같은 정책을 끼울 수 있다.
  *
  * 블로킹 함수다 — [ImageCompressor] 가 자기 디스패처에서 부른다. 오래 도는 구현은 반복마다
- * [EncodeContext.ensureActive] 를 불러 취소에 응해야 한다.
+ * [EncodeContext.ensureActive] 를 불러 취소에 응해야 한다. 실패는 [ImageCompressionException] 을 던져 알리면
+ * SDK 가 [CompressionResult.Failure] 로 바꾼다. `IllegalArgumentException` 은 프로그래머 오류로 보고 그대로 던진다.
  */
 public fun interface CompressionStrategy {
+    /** [context] 의 도구로 인코딩해 최종 결과를 정한다. */
     public fun compress(context: EncodeContext): EncodedImage
 }
 
@@ -97,10 +99,13 @@ public object SinglePassStrategy : CompressionStrategy {
  */
 public class TargetSizeStrategy(
     public val targetBytes: Long,
-    public val minQuality: Int = DEFAULT_MIN_QUALITY,
-    public val dimensionStep: Float = DEFAULT_DIMENSION_STEP,
-    public val minDimension: Int = DEFAULT_MIN_DIMENSION,
+    public val minQuality: Int,
+    public val dimensionStep: Float,
+    public val minDimension: Int,
 ) : CompressionStrategy {
+    /** 나머지를 기본값([DEFAULT_MIN_QUALITY]·[DEFAULT_DIMENSION_STEP]·[DEFAULT_MIN_DIMENSION])으로 둔 전략. */
+    public constructor(targetBytes: Long) : this(targetBytes, DEFAULT_MIN_QUALITY, DEFAULT_DIMENSION_STEP, DEFAULT_MIN_DIMENSION)
+
     init {
         require(targetBytes > 0) { "targetBytes 는 1 이상이어야 한다: $targetBytes" }
         require(minQuality in 1..100) { "minQuality 는 1..100 이어야 한다: $minQuality" }

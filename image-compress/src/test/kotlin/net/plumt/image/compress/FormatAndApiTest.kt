@@ -38,8 +38,8 @@ class FormatAndApiTest {
         }
     }
 
-    private fun roundTrip(): List<Int> = ImageFormat.values().map { f ->
-        val r = runBlocking { ImageCompressor { format = f; maxDimension = 64 }.compress(TestImages.noisyJpeg(128, 96)) }
+    private fun roundTrip(): List<Int> = ImageFormat.values.map { f ->
+        val r = runBlocking { ImageCompressor { format = f; maxDimension = 64 }.compressOrThrow(TestImages.noisyJpeg(128, 96)) }
         assertEquals(64, r.width)
         assertEquals(f, r.format)
         r.data.size
@@ -51,14 +51,14 @@ class FormatAndApiTest {
     @Config(sdk = [34]) @Test fun API_34_모든_형식() { assertTrue(roundTrip().all { it > 0 }) }
     @Config(sdk = [34]) @Test fun 손실_WebP_는_품질이_용량에_반영된다() {
         val src = TestImages.noisyJpeg(200, 200)
-        val hi = runBlocking { ImageCompressor { format = ImageFormat.WEBP; quality = 95 }.compress(src) }
-        val lo = runBlocking { ImageCompressor { format = ImageFormat.WEBP; quality = 20 }.compress(src) }
+        val hi = runBlocking { ImageCompressor { format = ImageFormat.WEBP; quality = 95 }.compressOrThrow(src) }
+        val lo = runBlocking { ImageCompressor { format = ImageFormat.WEBP; quality = 20 }.compressOrThrow(src) }
         assertTrue(lo.sizeInBytes < hi.sizeInBytes)
     }
 
     @Config(sdk = [34]) @Test fun 위치_보존은_JPEG_에서_동작() {
         val src = TestImages.withExif(TestImages.noisyJpeg(100, 100)) { setLatLong(37.5, 127.0) }
-        val r = runBlocking { ImageCompressor { preserveMetadata = setOf(MetadataGroup.LOCATION) }.compress(src) }
+        val r = runBlocking { ImageCompressor { preserveMetadata = setOf(MetadataGroup.LOCATION) }.compressOrThrow(src) }
         assertNotNull(ExifInterface(ByteArrayInputStream(r.data)).latLong)
         assertNull(null)
     }

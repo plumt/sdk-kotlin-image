@@ -29,3 +29,4 @@ dependencyResolutionManagement {
 rootProject.name = "sdk-kotlin-image"
 
 include(":image-compress")
+include(":sample")
